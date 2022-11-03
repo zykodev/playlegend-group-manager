@@ -1,4 +1,4 @@
-name: Group Manager
+name: GroupManager
 version: '${project.version}'
 main: net.playlegend.groupmanager.GroupManager
 api-version: 1.19
