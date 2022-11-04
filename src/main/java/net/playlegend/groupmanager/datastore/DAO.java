@@ -15,8 +15,10 @@ import java.util.List;
 import java.util.logging.Level;
 
 /**
- * This class provides all functionality for accessing and manipulating data.
- * <a href="https://www.spigotmc.org/threads/setup-jpa-hibernate-for-your-minecraft-plugin.397782/">Basic structure inspired by this forum post, but then updated and changed for this project.</a>
+ * This class provides all functionality for accessing and manipulating data. <a
+ * href="https://www.spigotmc.org/threads/setup-jpa-hibernate-for-your-minecraft-plugin.397782/">Basic
+ * structure inspired by this forum post, but then updated and changed for this project.</a>
+ *
  * @param <T> the entity this DAO can work with
  */
 public class DAO<T> {
@@ -33,8 +35,10 @@ public class DAO<T> {
 
   /**
    * Inserts an object into the data store.
+   *
    * @param entity the entity to store
-   * @throws DataAccessException if something goes wrong when accessing and manipulating the data store
+   * @throws DataAccessException if something goes wrong when accessing and manipulating the data
+   *     store
    */
   @Transactional
   public synchronized void put(T entity) throws DataAccessException {
@@ -74,6 +78,7 @@ public class DAO<T> {
 
   /**
    * Updates an object in the data store.
+   *
    * @param entity the entity to update containing up-to-date variables
    * @return the entity given
    * @throws DataAccessException if something goes wrong when manipulating the data
@@ -117,6 +122,7 @@ public class DAO<T> {
 
   /**
    * Deletes an object from the data store.
+   *
    * @param entity the entity to delete
    * @throws DataAccessException if something goes wrong when accessing or manipulating the data
    */
@@ -228,6 +234,7 @@ public class DAO<T> {
 
   /**
    * Quickly returns all objects stored of the given type.
+   *
    * @return all objects of the given type, in a list
    * @throws DataAccessException if something goes wrong when accessing the data
    */

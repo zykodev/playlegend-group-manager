@@ -87,9 +87,7 @@ public class GroupManager extends JavaPlugin {
     this.endHibernate();
   }
 
-  /**
-   * Shuts down the Hibernate backend.
-   */
+  /** Shuts down the Hibernate backend. */
   private void endHibernate() {
     if (this.sessionFactory == null || !this.sessionFactory.isOpen()) return;
     this.logger.log(Level.INFO, "Shutting down Hibernate backend...");

@@ -7,9 +7,7 @@ import java.util.Properties;
 
 public class FileUtil {
 
-  /**
-   * Root directory used to store all configuration files in.
-   */
+  /** Root directory used to store all configuration files in. */
   public static final File PLUGIN_ROOT_DIRECTORY = new File("plugins/GroupManager");
 
   /*
