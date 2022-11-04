@@ -2,18 +2,23 @@ package net.playlegend.groupmanager.util;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Properties;
 
 public class FileUtil {
 
+  /**
+   * Root directory used to store all configuration files in.
+   */
   public static final File PLUGIN_ROOT_DIRECTORY = new File("plugins/GroupManager");
 
+  /*
+   * Check default file and folder structure.
+   */
   static {
     try {
       if (!FileUtil.PLUGIN_ROOT_DIRECTORY.exists()) {
-        if(!FileUtil.PLUGIN_ROOT_DIRECTORY.mkdir()) {
+        if (!FileUtil.PLUGIN_ROOT_DIRECTORY.mkdir()) {
           throw new RuntimeException("Failed to create plugin root directory.");
         }
       }

@@ -1,10 +1,7 @@
 package net.playlegend.groupmanager;
 
+import jakarta.persistence.Entity;
 import lombok.Getter;
-import net.playlegend.groupmanager.datastore.DAO;
-import net.playlegend.groupmanager.datastore.DataAccessCallback;
-import net.playlegend.groupmanager.datastore.DataAccessException;
-import net.playlegend.groupmanager.model.GroupModel;
 import net.playlegend.groupmanager.util.FileUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -12,12 +9,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.hibernate.HibernateError;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,23 +54,6 @@ public class GroupManager extends JavaPlugin {
 
     try {
       this.setupHibernate();
-      GroupModel groupModel = new GroupModel();
-      groupModel.setName("default");
-      new DAO<>(GroupModel.class).putAsync(groupModel, new DataAccessCallback<GroupModel>() {
-        @Override
-        public void success(@Nullable GroupModel entity) {
-          GroupManager.this.logger.log(Level.INFO, "Group saved. Yay!");
-        }
-
-        @Override
-        public void multipleSuccess(@Nullable List<GroupModel> entities) {
-        }
-
-        @Override
-        public void error(@Nullable GroupModel entity, DataAccessException e) {
-          GroupManager.this.logger.log(Level.INFO, "Group failed to save. Oh nooo!", e);
-        }
-      });
     } catch (IOException e) {
       this.logger.log(
           Level.SEVERE, "Failed to create Hibernate storage backend. Cannot continue.", e);
@@ -96,7 +75,9 @@ public class GroupManager extends JavaPlugin {
         FileUtil.loadPropertiesFromFile(new File("plugins/GroupManager/hibernate.properties"));
     Configuration configuration = new Configuration();
     configuration.setProperties(hibernateProperties);
-    configuration.addAnnotatedClass(GroupModel.class);
+    Reflections reflections =
+        new Reflections("net.playlegend.groupmanager.model", Scanners.TypesAnnotated);
+    reflections.getTypesAnnotatedWith(Entity.class).forEach(configuration::addAnnotatedClass);
     this.sessionFactory = configuration.buildSessionFactory();
     this.logger.log(Level.INFO, "Hibernate setup successful.");
   }
@@ -106,6 +87,9 @@ public class GroupManager extends JavaPlugin {
     this.endHibernate();
   }
 
+  /**
+   * Shuts down the Hibernate backend.
+   */
   private void endHibernate() {
     if (this.sessionFactory == null || !this.sessionFactory.isOpen()) return;
     this.logger.log(Level.INFO, "Shutting down Hibernate backend...");
