@@ -5,3 +5,8 @@ api-version: 1.19
 authors: [ zykodev ]
 description: Group and permission management.
 website: https://playlegend.net
+prefix: "GroupManager"
+commands:
+  gmgroup:
+    description: Used for group management (creation, manipulation, deletion, etc.)
+    usage: /gmgroup

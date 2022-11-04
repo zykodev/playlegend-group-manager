@@ -21,12 +21,12 @@ public interface CriteriaAdapter<T> {
    *   92);
    * </ul>
    *
-   * Add this predicate to the returned list of predicates to filter for all groups with a priority
-   * of 92.
+   * Add this predicate to the output list of predicates to filter for all groups with a priority of
+   * 92.
    *
    * @param rootObject the root object virtually selecting everything
    * @param criteriaBuilder the criteria builder used to create filtering predicates
-   * @return a list containing all predicates to be applied when filtering
+   * @param output the list used for outputting predicates
    */
-  List<Predicate> applyCriteria(Root<T> rootObject, CriteriaBuilder criteriaBuilder);
+  void applyCriteria(Root<T> rootObject, CriteriaBuilder criteriaBuilder, List<Predicate> output);
 }
