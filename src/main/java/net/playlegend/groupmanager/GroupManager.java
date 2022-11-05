@@ -3,15 +3,27 @@ package net.playlegend.groupmanager;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import net.playlegend.groupmanager.command.GmGroupCommand;
+import net.playlegend.groupmanager.command.GmUserCommand;
+import net.playlegend.groupmanager.command.RankInfoCommand;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.DataAccessException;
+import net.playlegend.groupmanager.listener.PlayerChatListener;
+import net.playlegend.groupmanager.listener.PlayerConnectionListener;
+import net.playlegend.groupmanager.listener.PlayerSignChangeListener;
 import net.playlegend.groupmanager.model.Group;
 import net.playlegend.groupmanager.model.Group_;
+import net.playlegend.groupmanager.tasks.TaskGroupValidityCheck;
+import net.playlegend.groupmanager.tasks.TaskRebuild;
+import net.playlegend.groupmanager.tasks.TaskSignUpdate;
 import net.playlegend.groupmanager.text.TextManager;
 import net.playlegend.groupmanager.util.FileUtil;
+import net.playlegend.groupmanager.visualization.scoreboard.ScoreboardManager;
+import net.playlegend.groupmanager.visualization.sign.SignManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.hibernate.HibernateError;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
@@ -22,6 +34,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,7 +59,19 @@ public class GroupManager extends JavaPlugin {
 
   @Getter private SessionFactory sessionFactory;
 
+  @Getter private Group defaultGroup;
+
   @Getter private TextManager textManager;
+
+  @Getter private ScoreboardManager scoreboardManager;
+
+  @Getter private SignManager signManager;
+
+  @Getter private BukkitTask rebuildTask;
+
+  @Getter private BukkitTask signUpdateTask;
+
+  @Getter private BukkitTask groupValidCheckTask;
 
   @Getter
   private final String prefix =
@@ -64,17 +89,7 @@ public class GroupManager extends JavaPlugin {
 
     try {
       this.setupHibernate();
-      List<Group> defaultGroupResult =
-          Dao.forType(Group.class)
-              .find(
-                  (rootObject, criteriaBuilder, output) ->
-                      output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), "default")));
-      if (defaultGroupResult.isEmpty()) {
-        Group defaultGroup = new Group();
-        defaultGroup.setName("default");
-        Dao.forType(Group.class).put(defaultGroup);
-        this.log(Level.INFO, "Initialized default group.");
-      }
+      this.checkDefaultGroup();
     } catch (IOException | DataAccessException e) {
       this.log(Level.SEVERE, "Failed to create Hibernate storage backend. Cannot continue.", e);
       Bukkit.shutdown();
@@ -84,10 +99,39 @@ public class GroupManager extends JavaPlugin {
     this.textManager.loadLocales("de-DE");
 
     this.registerCommands();
+    this.registerListeners();
+
+    this.scoreboardManager = new ScoreboardManager();
+    this.scoreboardManager.rebuildPluginScoreboard();
+
+    this.signManager = new SignManager();
+
+    this.startSignUpdateTask();
+    this.startGroupValidityCheckTask();
+    this.startRebuildTask();
   }
 
+  @Override
+  public void onDisable() {
+    Bukkit.getScheduler().cancelTask(this.rebuildTask.getTaskId());
+    Bukkit.getScheduler().cancelTask(this.signUpdateTask.getTaskId());
+    Bukkit.getScheduler().cancelTask(this.groupValidCheckTask.getTaskId());
+    this.endHibernate();
+  }
+
+  /** Registers commands. */
   private void registerCommands() {
-    Bukkit.getPluginCommand("gmgroup").setExecutor(new GmGroupCommand());
+    Objects.requireNonNull(Bukkit.getPluginCommand("gmgroup")).setExecutor(new GmGroupCommand());
+    Objects.requireNonNull(Bukkit.getPluginCommand("rankinfo")).setExecutor(new RankInfoCommand());
+    Objects.requireNonNull(Bukkit.getPluginCommand("gmuser")).setExecutor(new GmUserCommand());
+  }
+
+  /** Registers event listeners. */
+  private void registerListeners() {
+    PluginManager pluginManager = Bukkit.getPluginManager();
+    pluginManager.registerEvents(new PlayerConnectionListener(), this);
+    pluginManager.registerEvents(new PlayerChatListener(), this);
+    pluginManager.registerEvents(new PlayerSignChangeListener(), this);
   }
 
   /**
@@ -111,19 +155,58 @@ public class GroupManager extends JavaPlugin {
     this.log(Level.INFO, "Hibernate setup successful.");
   }
 
-  @Override
-  public void onDisable() {
-    this.endHibernate();
-  }
-
   /** Shuts down the Hibernate backend. */
   private void endHibernate() {
     if (this.sessionFactory == null || !this.sessionFactory.isOpen()) return;
     this.log(Level.INFO, "Shutting down Hibernate backend...");
+    Dao.destroyDaoCache();
     this.sessionFactory.close();
     this.log(Level.INFO, "Hibernate backend shut down.");
   }
 
+  /**
+   * Checks whether the default group exists and if it does not exist, it creates one.
+   *
+   * @throws DataAccessException if there is an error during database read/manipulation
+   */
+  private void checkDefaultGroup() throws DataAccessException {
+    List<Group> defaultGroupResult =
+        Dao.forType(Group.class)
+            .find(
+                (rootObject, criteriaBuilder, output) ->
+                    output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), "default")));
+    if (defaultGroupResult.isEmpty()) {
+      Group defaultGroup = new Group();
+      defaultGroup.setName("default");
+      Dao.forType(Group.class).put(defaultGroup);
+      this.log(Level.INFO, "Initialized default group.");
+      this.defaultGroup = defaultGroup;
+    } else {
+      this.defaultGroup = defaultGroupResult.get(0);
+    }
+  }
+
+  /**
+   * Can be used to force clearing all caches, regenerate the scoreboard, etc. This is called
+   * automatically every 5 minutes and once for every data manipulation.
+   */
+  public void rebuildEverything() {
+    Dao.destroyDaoCache();
+    this.scoreboardManager.rebuildPluginScoreboard();
+    try {
+      this.signManager.reloadSigns();
+    } catch (DataAccessException e) {
+      this.log(Level.WARNING, "Failed to reload signs from database.", e);
+    }
+  }
+
+  /**
+   * Logs a message to console.
+   *
+   * @param level the level this message corresponds with
+   * @param message the actual message
+   * @param exception possibly an exception in order to print errors to console
+   */
   public void log(Level level, String message, @Nullable Throwable exception) {
     message = ChatColor.stripColor(this.prefix) + message;
     if (exception != null) {
@@ -133,7 +216,41 @@ public class GroupManager extends JavaPlugin {
     this.logger.log(level, message);
   }
 
+  /**
+   * Logs a message to console.
+   *
+   * @param level the level this message corresponds with
+   * @param message the actual message
+   */
   public void log(Level level, String message) {
     this.log(level, message, null);
+  }
+
+  /**
+   * Starts the rebuild task thread. Flushes all caches and rebuilds scoreboard, etc. Runs once
+   * every 5 minutes.
+   */
+  private void startRebuildTask() {
+    this.rebuildTask = Bukkit.getScheduler().runTaskTimer(this, new TaskRebuild(), 0, 6000);
+  }
+
+  /**
+   * Starts the sign update thread. Runs once every 5 seconds and updates all rank signs. (Also,
+   * deletes the ones that are not present anymore.)
+   */
+  private void startSignUpdateTask() {
+    this.signUpdateTask =
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, new TaskSignUpdate(), 0, 100);
+  }
+
+  /**
+   * Starts the group validity check thread. Runs once every 5 seconds and updates the rank for
+   * every online player, in case it is expired. If it actually is expired, the user will be reset
+   * to the default group.
+   */
+  private void startGroupValidityCheckTask() {
+    this.groupValidCheckTask =
+        Bukkit.getScheduler()
+            .runTaskTimerAsynchronously(this, new TaskGroupValidityCheck(), 0, 100);
   }
 }

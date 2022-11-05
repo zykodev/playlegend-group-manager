@@ -1,5 +1,6 @@
 package net.playlegend.groupmanager.datastore;
 
+/** Can occur when using the Daos to access the Hibernate backend. */
 public class DataAccessException extends Exception {
 
   public DataAccessException() {

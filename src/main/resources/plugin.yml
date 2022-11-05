@@ -10,3 +10,9 @@ commands:
   gmgroup:
     description: Used for group management (creation, manipulation, deletion, etc.)
     usage: /gmgroup
+  rankinfo:
+    description: Used to display one's current rank
+    usage: /rankinfo
+  gmuser:
+    description: Used for user management (information, manipulation, etc.)
+    usage: /gmuser

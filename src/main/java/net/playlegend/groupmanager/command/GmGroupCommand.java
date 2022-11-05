@@ -4,9 +4,13 @@ import com.google.common.collect.Maps;
 import lombok.Getter;
 import net.playlegend.groupmanager.GroupManager;
 import net.playlegend.groupmanager.datastore.Dao;
+import net.playlegend.groupmanager.datastore.wrapper.GroupDao;
+import net.playlegend.groupmanager.datastore.wrapper.PermissionDao;
 import net.playlegend.groupmanager.model.Group;
-import net.playlegend.groupmanager.model.Group_;
+import net.playlegend.groupmanager.model.Permission;
+import net.playlegend.groupmanager.util.CommandUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -14,7 +18,6 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 
 public class GmGroupCommand implements CommandExecutor {
@@ -23,9 +26,7 @@ public class GmGroupCommand implements CommandExecutor {
     CREATE("gm.group.create"),
     INFO("gm.group.info"),
     PERMADD("gm.group.permadd"),
-    USERADD("gm.group.useradd"),
     PERMDEL("gm.group.permdel"),
-    USERDEL("gm.group.userdel"),
     PREFIX("gm.group.prefix"),
     PRIORITY("gm.group.priority"),
     DELETE("gm.group.delete");
@@ -102,14 +103,8 @@ public class GmGroupCommand implements CommandExecutor {
                 case PERMADD:
                   this.executePermAdd(sender, args);
                   break;
-                case USERADD:
-                  this.executeUserAdd(sender, args);
-                  break;
                 case PERMDEL:
                   this.executePermDel(sender, args);
-                  break;
-                case USERDEL:
-                  this.executeUserDel(sender, args);
                   break;
                 case PREFIX:
                   this.executePrefix(sender, args);
@@ -127,27 +122,19 @@ public class GmGroupCommand implements CommandExecutor {
   }
 
   private void displayNoPermissions(CommandSender commandSender) {
-    String playerLocale = GroupManager.getInstance().getTextManager().getLocale(commandSender);
-    String message =
-        GroupManager.getInstance()
-            .getTextManager()
-            .getMessage(playerLocale, "gm.error.nopermission", null);
-    commandSender.sendMessage(GroupManager.getInstance().getPrefix() + message);
+    GroupManager.getInstance()
+        .getTextManager()
+        .sendMessage(commandSender, "gm.error.nopermission", null);
   }
 
   private void displayCommandHelp(CommandSender commandSender) {
-    String playerLocale = GroupManager.getInstance().getTextManager().getLocale(commandSender);
-    String message =
-        GroupManager.getInstance()
-            .getTextManager()
-            .getMessage(playerLocale, "gm.group.help.heading", null);
-    commandSender.sendMessage(GroupManager.getInstance().getPrefix() + message);
+    GroupManager.getInstance()
+        .getTextManager()
+        .sendMessage(commandSender, "gm.group.help.heading", null);
     for (SubCommand subCommand : GmGroupCommand.SubCommand.values()) {
-      message =
-          GroupManager.getInstance()
-              .getTextManager()
-              .getMessage(playerLocale, "gm.group.help." + subCommand.name().toLowerCase(), null);
-      commandSender.sendMessage(GroupManager.getInstance().getPrefix() + message);
+      GroupManager.getInstance()
+          .getTextManager()
+          .sendMessage(commandSender, "gm.group.help." + subCommand.name().toLowerCase(), null);
     }
   }
 
@@ -161,37 +148,29 @@ public class GmGroupCommand implements CommandExecutor {
         return;
       }
       try {
-        String[] prefixArgs = new String[args.length - 2];
-        System.arraycopy(args, 2, prefixArgs, 0, prefixArgs.length);
-        StringBuilder prefixBuilder = new StringBuilder();
-        for (String prefixArg : prefixArgs) {
-          prefixBuilder.append(prefixArg).append(" ");
-        }
-        String prefix = prefixBuilder.toString();
+        String prefix = CommandUtil.combineStringsInArray(args, 2, args.length - 1) + " ";
         prefix = prefix.replace('&', '§');
+        if (ChatColor.stripColor(prefix).equalsIgnoreCase(" ")) prefix = prefix.trim();
         if (prefix.length() > 16) {
           GroupManager.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.prefixtoolong", null);
           return;
         }
-        List<Group> matchingGroups =
-            Dao.forType(Group.class)
-                .find(
-                    (rootObject, criteriaBuilder, output) -> output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), groupName)));
-        if (matchingGroups.isEmpty()) {
-          Group group = new Group();
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = new HashMap<>();
+        if (group == null) {
+          group = new Group();
           group.setName(groupName);
           group.setPrefix(prefix);
           Dao.forType(Group.class).put(group);
-          HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", group.getName());
           replacements.put("%prefix%", group.getPrefix());
           GroupManager.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.create.success", replacements);
+
         } else {
-          HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
           GroupManager.getInstance()
               .getTextManager()
@@ -208,13 +187,105 @@ public class GmGroupCommand implements CommandExecutor {
     }
   }
 
-  private void executePermAdd(CommandSender sender, String[] args) {}
+  private void executePermAdd(CommandSender sender, String[] args) {
+    if (args.length == 3) {
+      String groupName = args[1];
+      if (groupName.length() > 14) {
+        GroupManager.getInstance()
+            .getTextManager()
+            .sendMessage(sender, "gm.group.error.nametoolong", null);
+        return;
+      }
+      try {
+        String permissionString = args[2];
+        Permission permission = PermissionDao.getOrCreatePermission(permissionString);
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = Maps.newHashMap();
+        if (group != null) {
+          replacements.put("%group%", group.getName());
+          replacements.put("%permission%", permission.getPermission());
+          for (Permission groupPermission : group.getPermissions()) {
+            if (groupPermission.getPermission().equalsIgnoreCase(permission.getPermission())) {
+              GroupManager.getInstance()
+                  .getTextManager()
+                  .sendMessage(sender, "gm.group.error.permissionalreadyset", replacements);
+              return;
+            }
+          }
+          group.getPermissions().add(permission);
+          Dao.forType(Group.class).update(group);
+          GroupManager.getInstance()
+              .getTextManager()
+              .sendMessage(sender, "gm.group.permadd.success", replacements);
 
-  private void executeUserAdd(CommandSender sender, String[] args) {}
+        } else {
+          replacements.put("%group%", groupName);
+          GroupManager.getInstance()
+              .getTextManager()
+              .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
+        }
+      } catch (Exception e) {
+        GroupManager.getInstance()
+            .getTextManager()
+            .sendMessage(sender, "gm.error.internalerror", null);
+        e.printStackTrace();
+      }
+    } else {
+      GroupManager.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.permadd", null);
+    }
+  }
 
-  private void executePermDel(CommandSender sender, String[] args) {}
+  private void executePermDel(CommandSender sender, String[] args) {
+    if (args.length == 3) {
+      String groupName = args[1];
+      if (groupName.length() > 14) {
+        GroupManager.getInstance()
+            .getTextManager()
+            .sendMessage(sender, "gm.group.error.nametoolong", null);
+        return;
+      }
+      try {
+        String permissionString = args[2];
+        Permission permission = PermissionDao.getOrCreatePermission(permissionString);
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = new HashMap<>();
+        if (group != null) {
+          replacements.put("%group%", group.getName());
+          replacements.put("%permission%", permission.getPermission());
+          for (Permission groupPermission : group.getPermissions()) {
+            if (groupPermission.getPermission().equalsIgnoreCase(permission.getPermission())) {
+              group.getPermissions().remove(groupPermission);
+              Dao.forType(Group.class).update(group);
+              GroupManager.getInstance()
+                  .getTextManager()
+                  .sendMessage(sender, "gm.group.permdel.success", replacements);
 
-  private void executeUserDel(CommandSender sender, String[] args) {}
+              return;
+            }
+          }
+          GroupManager.getInstance()
+              .getTextManager()
+              .sendMessage(sender, "gm.group.error.permissionnotset", replacements);
+        } else {
+          replacements.put("%group%", groupName);
+          GroupManager.getInstance()
+              .getTextManager()
+              .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
+        }
+      } catch (Exception e) {
+        GroupManager.getInstance()
+            .getTextManager()
+            .sendMessage(sender, "gm.error.internalerror", null);
+        e.printStackTrace();
+      }
+    } else {
+      GroupManager.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.permdel", null);
+    }
+  }
 
   private void executePrefix(CommandSender sender, String[] args) {
     if (args.length >= 2) {
@@ -226,27 +297,19 @@ public class GmGroupCommand implements CommandExecutor {
         return;
       }
       try {
-        String[] prefixArgs = new String[args.length - 2];
-        System.arraycopy(args, 2, prefixArgs, 0, prefixArgs.length);
-        StringBuilder prefixBuilder = new StringBuilder();
-        for (String prefixArg : prefixArgs) {
-          prefixBuilder.append(prefixArg).append(" ");
-        }
-        String prefix = prefixBuilder.toString();
+        String prefix = CommandUtil.combineStringsInArray(args, 2, args.length - 1) + " ";
         prefix = prefix.replace('&', '§');
+        if (ChatColor.stripColor(prefix).equalsIgnoreCase(" ")) prefix = prefix.trim();
         if (prefix.length() > 16) {
           GroupManager.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.prefixtoolong", null);
           return;
         }
-        List<Group> matchingGroups =
-            Dao.forType(Group.class)
-                .find(
-                    (rootObject, criteriaBuilder, output) -> output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), groupName)));
-        if (!matchingGroups.isEmpty()) {
-          Group group = matchingGroups.get(0);
-          HashMap<String, String> replacements = new HashMap<>();
+        if (ChatColor.stripColor(prefix).equalsIgnoreCase(" ")) prefix = prefix.trim();
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = new HashMap<>();
+        if (group != null) {
           replacements.put("%group%", group.getName());
           if (args.length >= 3) {
             group.setPrefix(prefix);
@@ -255,6 +318,7 @@ public class GmGroupCommand implements CommandExecutor {
             GroupManager.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.prefix.edit", replacements);
+
           } else {
             replacements.put("%prefix%", group.getPrefix());
             GroupManager.getInstance()
@@ -262,7 +326,6 @@ public class GmGroupCommand implements CommandExecutor {
                 .sendMessage(sender, "gm.group.prefix.show", replacements);
           }
         } else {
-          HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
           GroupManager.getInstance()
               .getTextManager()
@@ -289,13 +352,9 @@ public class GmGroupCommand implements CommandExecutor {
         return;
       }
       try {
-        List<Group> matchingGroups =
-            Dao.forType(Group.class)
-                .find(
-                    (rootObject, criteriaBuilder, output) -> output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), groupName)));
-        if (!matchingGroups.isEmpty()) {
-          Group group = matchingGroups.get(0);
-          HashMap<String, String> replacements = new HashMap<>();
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = new HashMap<>();
+        if (group != null) {
           replacements.put("%group%", group.getName());
           if (args.length == 3) {
             int priority;
@@ -314,6 +373,7 @@ public class GmGroupCommand implements CommandExecutor {
             GroupManager.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.priority.edit", replacements);
+
           } else {
             replacements.put("%priority%", "" + group.getPriority());
             GroupManager.getInstance()
@@ -321,7 +381,6 @@ public class GmGroupCommand implements CommandExecutor {
                 .sendMessage(sender, "gm.group.priority.show", replacements);
           }
         } else {
-          HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
           GroupManager.getInstance()
               .getTextManager()
@@ -356,19 +415,16 @@ public class GmGroupCommand implements CommandExecutor {
         return;
       }
       try {
-        List<Group> matchingGroups =
-            Dao.forType(Group.class)
-                .find(
-                    (rootObject, criteriaBuilder, output) -> output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), groupName)));
+        Group group = GroupDao.getGroup(groupName);
         HashMap<String, String> replacements = Maps.newHashMap();
         replacements.put("%group%", groupName);
-        if (!matchingGroups.isEmpty()) {
-          Group group = matchingGroups.get(0);
+        if (group != null) {
           Dao.forType(Group.class).delete(group);
           replacements.put("%group%", group.getName());
           GroupManager.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.delete.success", replacements);
+
         } else {
           replacements.put("%group%", groupName);
           GroupManager.getInstance()
@@ -396,13 +452,9 @@ public class GmGroupCommand implements CommandExecutor {
         return;
       }
       try {
-        List<Group> matchingGroups =
-            Dao.forType(Group.class)
-                .find(
-                    (rootObject, criteriaBuilder, output) -> output.add(criteriaBuilder.equal(rootObject.get(Group_.NAME), groupName)));
-        if (!matchingGroups.isEmpty()) {
-          Group group = matchingGroups.get(0);
-          HashMap<String, String> replacements = new HashMap<>();
+        Group group = GroupDao.getGroup(groupName);
+        HashMap<String, String> replacements = new HashMap<>();
+        if (group != null) {
           replacements.put("%group%", group.getName());
           replacements.put("%prefix%", group.getPrefix());
           replacements.put("%priority%", group.getPriority() + "");
@@ -416,7 +468,6 @@ public class GmGroupCommand implements CommandExecutor {
               .getTextManager()
               .sendMessage(sender, "gm.group.info.priority", replacements);
         } else {
-          HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
           GroupManager.getInstance()
               .getTextManager()

@@ -12,8 +12,9 @@ import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import net.playlegend.groupmanager.GroupManager;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 /**
@@ -26,14 +27,32 @@ import java.util.logging.Level;
  */
 public class Dao<T> {
 
+  private final Object lockObject = new Object();
+  private static final Object staticLockObject = new Object();
   private final Class<T> entityClass;
+  private EntityManager entityManager;
 
-  private Dao(Class<T> entityClass) {
+  /**
+   * Constructs a new DAO. Note that the resulting DAO is not cached automatically, so it is
+   * generally advised to use {@code Dao.fromType(Class<T>)} in order to prevent exhausting the
+   * connection pool.
+   *
+   * @param entityClass the dao type
+   */
+  public Dao(Class<T> entityClass) {
     this.entityClass = entityClass;
+    this.entityManager = this.createEntityManager();
+  }
+
+  private EntityManager createEntityManager() {
+    return GroupManager.getInstance().getSessionFactory().createEntityManager();
   }
 
   private EntityManager getEntityManager() {
-    return GroupManager.getInstance().getSessionFactory().createEntityManager();
+    if (this.entityManager.isOpen()) {
+      return this.entityManager;
+    }
+    return (this.entityManager = this.createEntityManager());
   }
 
   /**
@@ -44,16 +63,18 @@ public class Dao<T> {
    *     store
    */
   @Transactional
-  public synchronized void put(T entity) throws DataAccessException {
-    try {
-      EntityManager entityManager = this.getEntityManager();
-      EntityTransaction transaction = entityManager.getTransaction();
-      transaction.begin();
-      entityManager.persist(entity);
-      transaction.commit();
-      entityManager.close();
-    } catch (Exception e) {
-      throw new DataAccessException(e);
+  public void put(T entity) throws DataAccessException {
+    synchronized (this.lockObject) {
+      try {
+        EntityManager entityManager = this.getEntityManager();
+        EntityTransaction transaction = entityManager.getTransaction();
+        transaction.begin();
+        entityManager.persist(entity);
+        transaction.commit();
+        GroupManager.getInstance().rebuildEverything();
+      } catch (Exception e) {
+        throw new DataAccessException(e);
+      }
     }
   }
 
@@ -86,17 +107,19 @@ public class Dao<T> {
    * @throws DataAccessException if something goes wrong when manipulating the data
    */
   @Transactional
-  public synchronized T update(T entity) throws DataAccessException {
-    try {
-      EntityManager entityManager = this.getEntityManager();
-      EntityTransaction transaction = entityManager.getTransaction();
-      transaction.begin();
-      entityManager.merge(entity);
-      transaction.commit();
-      entityManager.close();
-      return entity;
-    } catch (Exception e) {
-      throw new DataAccessException(e);
+  public T update(T entity) throws DataAccessException {
+    synchronized (this.lockObject) {
+      try {
+        EntityManager entityManager = this.getEntityManager();
+        EntityTransaction transaction = entityManager.getTransaction();
+        transaction.begin();
+        entityManager.merge(entity);
+        transaction.commit();
+        GroupManager.getInstance().rebuildEverything();
+        return entity;
+      } catch (Exception e) {
+        throw new DataAccessException(e);
+      }
     }
   }
 
@@ -128,16 +151,18 @@ public class Dao<T> {
    * @throws DataAccessException if something goes wrong when accessing or manipulating the data
    */
   @Transactional
-  public synchronized void delete(T entity) throws DataAccessException {
-    try {
-      EntityManager entityManager = getEntityManager();
-      EntityTransaction entityTransaction = entityManager.getTransaction();
-      entityTransaction.begin();
-      entityManager.remove(entityManager.merge(entity));
-      entityTransaction.commit();
-      entityManager.close();
-    } catch (Exception e) {
-      throw new DataAccessException(e);
+  public void delete(T entity) throws DataAccessException {
+    synchronized (this.lockObject) {
+      try {
+        EntityManager entityManager = getEntityManager();
+        EntityTransaction entityTransaction = entityManager.getTransaction();
+        entityTransaction.begin();
+        entityManager.remove(entityManager.merge(entity));
+        entityTransaction.commit();
+        GroupManager.getInstance().rebuildEverything();
+      } catch (Exception e) {
+        throw new DataAccessException(e);
+      }
     }
   }
 
@@ -169,43 +194,44 @@ public class Dao<T> {
    * @return a list containing all objects fulfilling the criteria
    * @throws DataAccessException if something goes wrong when accessing the data store
    */
-  public synchronized List<T> find(CriteriaAdapter<T> criteriaAdapter) throws DataAccessException {
-    try {
-      EntityManager entityManager = getEntityManager();
-      EntityTransaction entityTransaction = entityManager.getTransaction();
-      entityTransaction.begin();
-      CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-      CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(this.entityClass);
-      Root<T> root =
-          criteriaQuery.from(
-              this.entityClass); // root now virtually selects every object, and we can filter on
-      // this root object.
+  public List<T> find(CriteriaAdapter<T> criteriaAdapter) throws DataAccessException {
+    synchronized (this.lockObject) {
+      try {
+        EntityManager entityManager = getEntityManager();
+        EntityTransaction entityTransaction = entityManager.getTransaction();
+        entityTransaction.begin();
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(this.entityClass);
+        Root<T> root =
+            criteriaQuery.from(
+                this.entityClass); // root now virtually selects every object, and we can filter on
+        // this root object.
 
-      List<Predicate> predicates = Lists.newArrayList();
-      criteriaAdapter.applyCriteria(root, criteriaBuilder, predicates);
+        List<Predicate> predicates = Lists.newArrayList();
+        criteriaAdapter.applyCriteria(root, criteriaBuilder, predicates);
 
-      CriteriaQuery<T> query;
-      if (predicates.isEmpty()) {
-        query = criteriaQuery.select(root); // no need to filter, as there are no criteria.
-      } else {
-        query =
-            criteriaQuery
-                .select(root)
-                .where(predicates.toArray(Predicate[]::new)); // filter on the root object.
+        CriteriaQuery<T> query;
+        if (predicates.isEmpty()) {
+          query = criteriaQuery.select(root); // no need to filter, as there are no criteria.
+        } else {
+          query =
+              criteriaQuery
+                  .select(root)
+                  .where(predicates.toArray(Predicate[]::new)); // filter on the root object.
+        }
+
+        TypedQuery<T> result = entityManager.createQuery(query);
+        List<T> resultList = result.getResultList();
+        entityTransaction.commit();
+        return resultList; // execute the query and return the result list.
+
+        //
+        // TODO: Freshen this up -> Make it more readable, possibly move stuff into different
+        // sub-methods.
+        //
+      } catch (Exception e) {
+        throw new DataAccessException(e);
       }
-
-      TypedQuery<T> result = entityManager.createQuery(query);
-      List<T> resultList = result.getResultList();
-      entityTransaction.commit();
-      entityManager.close();
-      return resultList; // execute the query and return the result list.
-
-      //
-      // TODO: Freshen this up -> Make it more readable, possibly move stuff into different
-      // sub-methods.
-      //
-    } catch (Exception e) {
-      throw new DataAccessException(e);
     }
   }
 
@@ -237,11 +263,13 @@ public class Dao<T> {
    * @return all objects of the given type, in a list
    * @throws DataAccessException if something goes wrong when accessing the data
    */
-  public synchronized List<T> findAll() throws DataAccessException {
-    try {
-      return this.find((rootObject, criteriaBuilder, output) -> {});
-    } catch (Exception e) {
-      throw new DataAccessException(e);
+  public List<T> findAll() throws DataAccessException {
+    synchronized (this.lockObject) {
+      try {
+        return this.find((rootObject, criteriaBuilder, output) -> {});
+      } catch (Exception e) {
+        throw new DataAccessException(e);
+      }
     }
   }
 
@@ -262,7 +290,8 @@ public class Dao<T> {
         .start();
   }
 
-  private static final HashMap<Class<?>, Dao> DAO_CACHE_MAP = Maps.newHashMap();
+  private static final Map<Class<?>, Dao> DAO_CACHE_MAP =
+      Collections.synchronizedMap(Maps.newHashMap());
 
   /**
    * Quickly instantiates a new DAO or retrieves a cached DAO for a given Entity type. Can be used
@@ -273,11 +302,28 @@ public class Dao<T> {
    * @param <T> the entity type
    */
   public static <T> Dao<T> forType(Class<T> entityClass) {
-    Dao<T> dao = Dao.DAO_CACHE_MAP.get(entityClass);
-    if (dao == null) {
-      dao = new Dao<>(entityClass);
-      Dao.DAO_CACHE_MAP.put(entityClass, dao);
+    synchronized (Dao.staticLockObject) {
+      Dao<T> dao = Dao.DAO_CACHE_MAP.get(entityClass);
+      if (dao == null) {
+        dao = new Dao<>(entityClass);
+        Dao.DAO_CACHE_MAP.put(entityClass, dao);
+      }
+      return dao;
     }
-    return dao;
+  }
+
+  /** Destroys all cached DAOs in order to invalidate caches. */
+  public static void destroyDaoCache() {
+    synchronized (Dao.staticLockObject) {
+      Dao.DAO_CACHE_MAP.values().forEach(Dao::destroyDao);
+      Dao.DAO_CACHE_MAP.clear();
+    }
+  }
+
+  /** Shuts down this DAO, clearing its cache. */
+  public void destroyDao() {
+    synchronized (this.lockObject) {
+      this.getEntityManager().close();
+    }
   }
 }
