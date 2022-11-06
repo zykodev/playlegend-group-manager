@@ -7,7 +7,7 @@ public class GroupManagerConfig {
 
   @JsonProperty("fallback_locale")
   @Getter
-  private String fallbackLocale = "de-DE";
+  private String fallbackLocale = "de_de";
 
   @JsonProperty("cache_rebuild_interval_ticks")
   @Getter

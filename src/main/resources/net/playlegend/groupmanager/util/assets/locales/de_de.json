@@ -1,5 +1,5 @@
 {
-  "locale.name": "de-DE",
+  "locale.name": "de_de",
   "locale.texts": {
     "gm.error.nopermission": "§cDu hast keine Berechtigungen für diesen Befehl.",
     "gm.error.internalerror": "§cEs ist ein interner Fehler aufgetreten. Bitte kontaktiere umgehend einen Administrator.",

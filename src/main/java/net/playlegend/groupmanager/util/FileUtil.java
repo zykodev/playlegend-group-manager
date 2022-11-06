@@ -56,14 +56,14 @@ public class FileUtil {
     File hibernateConfig = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "hibernate.properties");
     if (!hibernateConfig.exists()) {
       Files.copy(
-          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/locales/de-DE.json")),
+          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/hibernate.properties")),
           hibernateConfig.toPath());
     }
-    File deLocale = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "locales/de-DE.json");
+    File deLocale = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "locales/de_de.json");
     if (!deLocale.getParentFile().exists()) deLocale.getParentFile().mkdir();
     if (!deLocale.exists()) {
       Files.copy(
-          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/locales/de-DE.json")),
+          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/locales/de_de.json")),
           deLocale.toPath());
     }
     File configFile = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "config.json");
