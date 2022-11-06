@@ -19,6 +19,7 @@ public class PlayerConnectionListener implements Listener {
 
   @EventHandler
   public void handlePlayerJoinEvent(PlayerJoinEvent playerJoinEvent) {
+    playerJoinEvent.setJoinMessage(null);
     try {
       GroupManagerPlugin.getInstance()
           .getPermissibleManager()
@@ -40,7 +41,6 @@ public class PlayerConnectionListener implements Listener {
                   HashMap<String, String> replacements = Maps.newHashMap();
                   replacements.put("%player%", user.getName());
                   replacements.put("%prefix%", user.getGroup().getPrefix());
-                  playerJoinEvent.setJoinMessage(null);
                   player.sendMessage(
                       GroupManagerPlugin.getInstance()
                           .getTextManager()
@@ -64,6 +64,7 @@ public class PlayerConnectionListener implements Listener {
 
   @EventHandler
   public void handlePlayerQuitEvent(PlayerQuitEvent playerQuitEvent) {
+    playerQuitEvent.setQuitMessage(null);
     Bukkit.getScheduler()
         .runTaskAsynchronously(
             GroupManagerPlugin.getInstance(),
@@ -75,7 +76,6 @@ public class PlayerConnectionListener implements Listener {
                   HashMap<String, String> replacements = Maps.newHashMap();
                   replacements.put("%player%", user.getName());
                   replacements.put("%prefix%", user.getGroup().getPrefix());
-                  playerQuitEvent.setQuitMessage(null);
                   player.sendMessage(
                       GroupManagerPlugin.getInstance()
                           .getTextManager()
