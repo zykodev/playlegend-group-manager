@@ -64,6 +64,7 @@ public class Dao<T> {
    */
   @Transactional
   public void put(T entity) throws DataAccessException {
+    if (entity == null) return;
     synchronized (this.lockObject) {
       try {
         EntityManager entityManager = this.getEntityManager();
@@ -108,6 +109,7 @@ public class Dao<T> {
    */
   @Transactional
   public T update(T entity) throws DataAccessException {
+    if (entity == null) return null;
     synchronized (this.lockObject) {
       try {
         EntityManager entityManager = this.getEntityManager();
@@ -152,12 +154,14 @@ public class Dao<T> {
    */
   @Transactional
   public void delete(T entity) throws DataAccessException {
+    if (entity == null) return;
     synchronized (this.lockObject) {
       try {
         EntityManager entityManager = getEntityManager();
         EntityTransaction entityTransaction = entityManager.getTransaction();
         entityTransaction.begin();
-        entityManager.remove(entityManager.merge(entity));
+        entity = entityManager.merge(entity);
+        entityManager.remove(entity);
         entityTransaction.commit();
         GroupManagerPlugin.getInstance().rebuildEverything();
       } catch (Exception e) {

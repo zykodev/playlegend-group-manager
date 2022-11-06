@@ -17,7 +17,7 @@ public class Permission {
   @Setter
   private String permission;
 
-  @ManyToMany(mappedBy = "permissions")
+  @ManyToMany(mappedBy = "permissions", fetch = FetchType.EAGER)
   @Getter
   @Setter
   private Set<Group> groups;

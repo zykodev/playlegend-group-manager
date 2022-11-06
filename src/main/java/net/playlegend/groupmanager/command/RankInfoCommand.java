@@ -5,16 +5,16 @@ import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.DataAccessException;
 import net.playlegend.groupmanager.datastore.wrapper.UserDao;
 import net.playlegend.groupmanager.model.User;
+import net.playlegend.groupmanager.util.CommandUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 import java.util.HashMap;
+import java.util.logging.Level;
 
 public class RankInfoCommand implements CommandExecutor {
 
@@ -39,21 +39,7 @@ public class RankInfoCommand implements CommandExecutor {
                         replacements.put("%group%", user.getGroup().getName());
                         replacements.put("%prefix%", user.getGroup().getPrefix());
                         replacements.put("%player%", player.getName());
-                        if (user.getGroupValidUntil() == -1) {
-                          replacements.put(
-                              "%duration%",
-                              GroupManagerPlugin.getInstance()
-                                  .getTextManager()
-                                  .getMessage(player, "gm.user.group.duration.infinite", null));
-                        } else {
-                          String format =
-                              GroupManagerPlugin.getInstance()
-                                  .getTextManager()
-                                  .getMessage(player, "gm.user.group.duration.format", null);
-                          DateTimeFormatter formatter = DateTimeFormat.forPattern(format);
-                          String formattedTime = formatter.print(user.getGroupValidUntil());
-                          replacements.put("%duration%", formattedTime);
-                        }
+                        CommandUtil.insertDurationReplacement(user, player, replacements);
                         GroupManagerPlugin.getInstance()
                             .getTextManager()
                             .sendMessage(sender, "gm.rankinfo.heading", replacements);
@@ -68,7 +54,11 @@ public class RankInfoCommand implements CommandExecutor {
                             "User not known in database, but is executing commands");
                       }
                     } catch (DataAccessException | IllegalStateException e) {
-                      e.printStackTrace();
+                      GroupManagerPlugin.getInstance()
+                          .log(
+                              Level.WARNING,
+                              "Failed to display rank information to player " + player.getName(),
+                              e);
                     }
                   });
         } else {

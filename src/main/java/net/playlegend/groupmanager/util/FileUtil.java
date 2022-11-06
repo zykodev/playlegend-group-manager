@@ -13,7 +13,8 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * Provides commonly used, file-related functions such as resource extraction and loading a properties file.
+ * Provides commonly used, file-related functions such as resource extraction and loading a
+ * properties file.
  */
 public class FileUtil {
 

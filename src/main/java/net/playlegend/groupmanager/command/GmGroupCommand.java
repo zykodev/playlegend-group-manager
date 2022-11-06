@@ -267,7 +267,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to add permission", e);
       }
     } else {
       GroupManagerPlugin.getInstance()
@@ -317,7 +317,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to remove permission", e);
       }
     } else {
       GroupManagerPlugin.getInstance()
@@ -374,7 +374,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to change prefix", e);
       }
     } else {
       GroupManagerPlugin.getInstance()
@@ -431,7 +431,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to change priority", e);
       }
     } else {
       GroupManagerPlugin.getInstance()
@@ -476,7 +476,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to delete group", e);
       }
     } else {
       GroupManagerPlugin.getInstance()
@@ -520,7 +520,7 @@ public class GmGroupCommand implements CommandExecutor {
         GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to retrieve information", e);
       }
     } else {
       GroupManagerPlugin.getInstance()

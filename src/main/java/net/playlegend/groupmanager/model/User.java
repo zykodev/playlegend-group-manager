@@ -29,7 +29,11 @@ public class User {
   @Setter
   private Group group;
 
-  @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+  @OneToMany(
+      mappedBy = "user",
+      cascade = CascadeType.REMOVE,
+      orphanRemoval = true,
+      fetch = FetchType.EAGER)
   @Getter
   @Setter
   private Set<RankSign> rankSigns;

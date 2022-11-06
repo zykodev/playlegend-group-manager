@@ -46,20 +46,11 @@ public class PlayerConnectionListener implements Listener {
                           .getTextManager()
                           .getMessage(locale, "gm.join", replacements));
                 }
-                GroupManagerPlugin.getInstance()
-                    .getScoreboardManager()
-                    .addPlayerToScoreboard(
-                        GroupManagerPlugin.getInstance()
-                            .getScoreboardManager()
-                            .getPluginScoreboard(),
-                        playerJoinEvent.getPlayer(),
-                        user);
+                GroupManagerPlugin.getInstance().getScoreboardManager().updateScoreboards();
                 GroupManagerPlugin.getInstance().getPermissibleManager().cacheUserData(user);
               }
             });
-    GroupManagerPlugin.getInstance()
-        .getScoreboardManager()
-        .updateScoreboard(playerJoinEvent.getPlayer());
+    GroupManagerPlugin.getInstance().getScoreboardManager().updateScoreboards();
   }
 
   @EventHandler

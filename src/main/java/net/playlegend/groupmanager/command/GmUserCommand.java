@@ -14,8 +14,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 
@@ -167,21 +165,7 @@ public class GmUserCommand implements CommandExecutor {
     replacements.put("%player%", user.getName());
     replacements.put("%group%", user.getGroup().getName());
 
-    if (user.getGroupValidUntil() == -1) {
-      replacements.put(
-          "%duration%",
-          GroupManagerPlugin.getInstance()
-              .getTextManager()
-              .getMessage(commandSender, "gm.user.group.duration.infinite", null));
-    } else {
-      String format =
-          GroupManagerPlugin.getInstance()
-              .getTextManager()
-              .getMessage(commandSender, "gm.user.group.duration.format", null);
-      DateTimeFormatter formatter = DateTimeFormat.forPattern(format);
-      String formattedTime = formatter.print(user.getGroupValidUntil());
-      replacements.put("%duration%", formattedTime);
-    }
+    CommandUtil.insertDurationReplacement(user, commandSender, replacements);
 
     GroupManagerPlugin.getInstance()
         .getTextManager()

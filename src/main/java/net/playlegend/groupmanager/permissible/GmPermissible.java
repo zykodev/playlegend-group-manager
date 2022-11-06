@@ -9,14 +9,22 @@ import org.bukkit.permissions.ServerOperator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
-/**
- * Proxy object to intercept calls to hasPermission.
- */
+/** Proxy object to intercept calls to hasPermission. */
 public class GmPermissible extends PermissibleBase {
 
   private Player associatedPlayer;
+
+  private PermissibleBase oldPermissible;
+
+  public GmPermissible(PermissibleBase oldPermissible) {
+    super(oldPermissible);
+    this.oldPermissible = oldPermissible;
+  }
 
   public GmPermissible(@Nullable ServerOperator opable) {
     super(opable);
@@ -35,14 +43,45 @@ public class GmPermissible extends PermissibleBase {
             .getCachedPlayerGroups()
             .get(this.associatedPlayer.getUniqueId());
     if (group != null) {
+      Map<String, Boolean> groupPermissionCache =
+          GroupManagerPlugin.getInstance()
+              .getPermissibleManager()
+              .getCachedGroupCheckedPermissions()
+              .computeIfAbsent(group, k -> new HashMap<>());
+
+      // check if cached and if cached, return the cached value
+      if (groupPermissionCache.containsKey(inName)) {
+        return groupPermissionCache.get(inName);
+      }
       Set<net.playlegend.groupmanager.model.Permission> permissionsSet =
           GroupManagerPlugin.getInstance()
               .getPermissibleManager()
               .getCachedGroupPermissions()
               .get(group);
+      Set<net.playlegend.groupmanager.model.Permission> defaultPermissionsSet =
+          GroupManagerPlugin.getInstance()
+              .getPermissibleManager()
+              .getCachedGroupPermissions()
+              .get(GroupManagerPlugin.getInstance().getDefaultGroup());
+      Set<net.playlegend.groupmanager.model.Permission> combinedSet = new HashSet<>(permissionsSet);
+      combinedSet.addAll(defaultPermissionsSet);
+
+      // check for star permission up front
+      if (this.isPermissionPresent(combinedSet, "*")) {
+        groupPermissionCache.put(inName, true);
+        return true;
+      }
+
+      // no one can have an empty permission
       if (inName.length() == 0) return false;
-      if (this.isPermissionPresent(permissionsSet, "*")) return true;
-      if (this.isPermissionPresent(permissionsSet, inName)) return true;
+
+      // check against the raw permission
+      if (this.isPermissionPresent(combinedSet, inName)) {
+        groupPermissionCache.put(inName, true);
+        return true;
+      }
+
+      // check against possible wildcard permission
       if (inName.contains(".")) {
         String[] parts = inName.split("\\.");
         for (int i = 0; i < parts.length; i++) {
@@ -51,9 +90,13 @@ public class GmPermissible extends PermissibleBase {
             result.append(parts[j]).append(".");
           }
           result.append("*");
-          if (this.isPermissionPresent(permissionsSet, result.toString())) return true;
+          if (this.isPermissionPresent(combinedSet, result.toString())) {
+            groupPermissionCache.put(inName, true);
+            return true;
+          }
         }
       }
+      groupPermissionCache.put(inName, false);
     }
     return false;
   }

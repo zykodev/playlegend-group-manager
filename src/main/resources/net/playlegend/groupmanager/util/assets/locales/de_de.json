@@ -48,6 +48,22 @@
     "gm.user.group.duration.infinite": "§apermanent",
     "gm.user.group.duration.format": "dd.MM.yyyy 'um' HH:mm:ss",
     "gm.user.help.heading": "Verwendung von /gmuser:",
-    "gm.user.help.group": "§e/gmuser group <Spieler> [Gruppe] [Dauer] §8- §7Zeigt die Gruppe eines Spielers an, bzw. ändert diese (für eine bestimmte Zeit). Nach Ablauf der Zeit befindet sich der Spieler wieder in der Standardgruppe."
+    "gm.user.help.group": "§e/gmuser group <Spieler> [Gruppe] [Dauer] §8- §7Zeigt die Gruppe eines Spielers an, bzw. ändert diese (für eine bestimmte Zeit). Nach Ablauf der Zeit befindet sich der Spieler wieder in der Standardgruppe.",
+    "gm.sidebar.line.0": " ",
+    "gm.sidebar.line.1": "§7Dein Rang:",
+    "gm.sidebar.line.2": "§e%group%",
+    "gm.sidebar.line.3": " ",
+    "gm.sidebar.line.4": "§7Gültig bis:",
+    "gm.sidebar.line.5": "§e%duration%",
+    "gm.sidebar.line.6": "",
+    "gm.sidebar.line.7": "",
+    "gm.sidebar.line.8": "",
+    "gm.sidebar.line.9": "",
+    "gm.sidebar.line.10": "",
+    "gm.sidebar.line.11": "",
+    "gm.sidebar.line.12": "",
+    "gm.sidebar.line.13": "",
+    "gm.sidebar.line.14": "",
+    "gm.sidebar.line.title": "§c§lGroupManager"
   }
 }

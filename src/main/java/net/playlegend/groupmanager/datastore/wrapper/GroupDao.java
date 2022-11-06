@@ -49,7 +49,13 @@ public class GroupDao {
    * @throws DataAccessException if there is a database error
    */
   public static void deleteGroup(Group group) throws DataAccessException {
-    group.getUsers().forEach(u -> u.setGroup(GroupManagerPlugin.getInstance().getDefaultGroup()));
+    group
+        .getUsers()
+        .forEach(
+            u -> {
+              u.setGroup(GroupManagerPlugin.getInstance().getDefaultGroup());
+              u.setGroupValidUntil(-1);
+            });
     group.getPermissions().forEach(p -> p.getGroups().remove(group));
     group.getPermissions().clear();
     group.getUsers().clear();

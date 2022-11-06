@@ -36,7 +36,7 @@ public class Group {
   @Setter
   private String prefix = "";
 
-  @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
+  @OneToMany(mappedBy = "group", fetch = FetchType.EAGER)
   @Getter
   @Setter
   private Set<User> users = new HashSet<>();

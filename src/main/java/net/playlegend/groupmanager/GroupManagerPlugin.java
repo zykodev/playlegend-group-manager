@@ -45,8 +45,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Plugin written for the PlayLegend.net application process.
- * This class provides a singleton instance to use for interaction with this plugin.
+ * Plugin written for the PlayLegend.net application process. This class provides a singleton
+ * instance to use for interaction with this plugin.
  *
  * @author Lenny (zykodev)
  */
@@ -97,9 +97,7 @@ public class GroupManagerPlugin extends JavaPlugin {
     super();
   }
 
-  /**
-   * Required for and only for mocking purposes when testing. (// undocumented)
-   */
+  /** Required for and only for mocking purposes when testing. (// undocumented) */
   public GroupManagerPlugin(
       JavaPluginLoader loader, PluginDescriptionFile desc, File dataFolder, File file) {
     super(loader, desc, dataFolder, file);
@@ -119,30 +117,31 @@ public class GroupManagerPlugin extends JavaPlugin {
       this.log(Level.WARNING, "Failed to extract default resources and load config.", e);
     }
 
+    this.scoreboardManager = new ScoreboardManager();
+    this.signManager = new SignManager();
+    this.permissibleManager = new PermissibleManager();
+    this.textManager = new TextManager();
+
     try {
       this.setupHibernate();
       this.checkDefaultGroup();
     } catch (IOException | DataAccessException e) {
       this.log(Level.SEVERE, "Failed to create Hibernate storage backend. Cannot continue.", e);
-      Bukkit.shutdown();
+      e.printStackTrace();
     }
 
-    this.textManager = new TextManager();
     this.textManager.loadLocales(this.groupManagerConfig.getFallbackLocale());
 
     this.registerCommands();
     this.registerListeners();
 
-    this.scoreboardManager = new ScoreboardManager();
-    this.scoreboardManager.rebuildPluginScoreboard();
-
-    this.signManager = new SignManager();
+    if (Bukkit.getOnlinePlayers().size() > 0) {
+      this.scoreboardManager.updateScoreboards();
+    }
 
     this.startSignUpdateTask();
     this.startGroupValidityCheckTask();
     this.startRebuildTask();
-
-    this.permissibleManager = new PermissibleManager();
   }
 
   @Override
@@ -226,7 +225,7 @@ public class GroupManagerPlugin extends JavaPlugin {
    */
   public void rebuildEverything() {
     Dao.destroyDaoCache();
-    this.scoreboardManager.rebuildPluginScoreboard();
+    this.scoreboardManager.updateScoreboards();
     try {
       this.signManager.reloadSigns();
       this.permissibleManager.createCaches();
@@ -268,7 +267,7 @@ public class GroupManagerPlugin extends JavaPlugin {
   private void startRebuildTask() {
     this.rebuildTask =
         Bukkit.getScheduler()
-            .runTaskTimer(
+            .runTaskTimerAsynchronously(
                 this, new TaskRebuild(), 0, this.groupManagerConfig.getCacheRebuildInterval());
   }
 
