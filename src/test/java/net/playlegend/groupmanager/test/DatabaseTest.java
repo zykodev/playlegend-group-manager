@@ -18,7 +18,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TestDatabase {
+public class DatabaseTest {
 
   private ServerMock server;
   private GroupManagerPlugin groupManagerPlugin;
@@ -26,9 +26,11 @@ public class TestDatabase {
 
   @BeforeAll
   public void prepareTest() throws Exception {
+    System.out.println("Test preparation...");
     this.extractHibernateConfig();
     this.server = MockBukkit.mock();
     this.groupManagerPlugin = MockBukkit.load(GroupManagerPlugin.class);
+    System.out.println("Done!");
   }
 
   public void extractHibernateConfig() throws Exception {
