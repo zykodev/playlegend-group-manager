@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 
 /**
  * Plugin written for the PlayLegend.net application process.
+ * This class provides a singleton instance to use for interaction with this plugin.
  *
  * @author Lenny (zykodev)
  */
@@ -96,6 +97,9 @@ public class GroupManagerPlugin extends JavaPlugin {
     super();
   }
 
+  /**
+   * Required for and only for mocking purposes when testing. (// undocumented)
+   */
   public GroupManagerPlugin(
       JavaPluginLoader loader, PluginDescriptionFile desc, File dataFolder, File file) {
     super(loader, desc, dataFolder, file);

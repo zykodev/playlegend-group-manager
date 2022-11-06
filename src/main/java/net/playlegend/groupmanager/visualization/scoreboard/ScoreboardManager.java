@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 
+/**
+ * Takes care of everything tab-list related such as managing scoreboard teams and apply them to players.
+ */
 public class ScoreboardManager {
 
   @Getter private Scoreboard pluginScoreboard;
@@ -131,6 +134,7 @@ public class ScoreboardManager {
                 team.addEntry(player.getName());
                 player.setDisplayName(team.getPrefix() + player.getName());
               });
+
     }
   }
 

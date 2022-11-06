@@ -15,6 +15,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.logging.Level;
 
+/**
+ * Takes care of everything text/message related such as sending translated messages to users.
+ */
 public class TextManager {
 
   private final HashMap<String, LocaleConfiguration> localesMap = Maps.newHashMap();

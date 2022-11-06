@@ -17,6 +17,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 
+/**
+ * Takes care of all the rank signs, either creating or deleting them. Also caches information to enhance execution times.
+ */
 public class SignManager {
 
   private final List<RankSign> rankSigns = Collections.synchronizedList(Lists.newArrayList());

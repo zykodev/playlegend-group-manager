@@ -11,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
+/**
+ * Proxy object to intercept calls to hasPermission.
+ */
 public class GmPermissible extends PermissibleBase {
 
   private Player associatedPlayer;

@@ -13,6 +13,9 @@ import org.bukkit.permissions.PermissibleBase;
 import java.lang.reflect.Field;
 import java.util.*;
 
+/**
+ * Takes care of caching user/group permissions and permissible injection.
+ */
 public class PermissibleManager {
 
   @Getter

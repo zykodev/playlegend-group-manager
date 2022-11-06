@@ -1,5 +1,8 @@
 package net.playlegend.groupmanager.util;
 
+/**
+ * Provides commonly used functions so that they can be shared across multiple commands.
+ */
 public class CommandUtil {
 
   /**
