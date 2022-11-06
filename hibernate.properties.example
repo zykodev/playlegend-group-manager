@@ -1,0 +1,9 @@
+#Hibernate Test Configuration
+#Mon Nov 07 00:46:18 CET 2022
+hibernate.connection.driver_class=com.mysql.jdbc.Driver
+hibernate.connection.url=jdbc\:mysql\://localhost\:3306/database?autoReconnect\=true
+hibernate.hbm2ddl.auto=update
+hibernate.dialect=org.hibernate.dialect.MySQLDialect
+hibernate.show_sql=false
+hibernate.connection.password=username
+hibernate.connection.username=password
