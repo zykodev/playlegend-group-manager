@@ -1,6 +1,6 @@
 package net.playlegend.groupmanager.listener;
 
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.wrapper.UserDao;
 import net.playlegend.groupmanager.model.RankSign;
@@ -24,7 +24,7 @@ public class PlayerSignChangeListener implements Listener {
         String playerName = e.getLine(1);
         Bukkit.getScheduler()
             .runTaskAsynchronously(
-                GroupManager.getInstance(),
+                GroupManagerPlugin.getInstance(),
                 () -> {
                   try {
                     User user = UserDao.getUser(playerName);
@@ -36,14 +36,15 @@ public class PlayerSignChangeListener implements Listener {
                       rankSign.setPosZ(e.getBlock().getZ());
                       rankSign.setUser(user);
                       Dao.forType(RankSign.class).put(rankSign);
-                      GroupManager.getInstance().getSignManager().reloadSigns();
+                      GroupManagerPlugin.getInstance().getSignManager().reloadSigns();
                     } else {
                       Bukkit.getScheduler()
                           .runTask(
-                              GroupManager.getInstance(), () -> e.getBlock().setType(Material.AIR));
+                              GroupManagerPlugin.getInstance(),
+                              () -> e.getBlock().setType(Material.AIR));
                     }
                   } catch (Exception ex) {
-                    GroupManager.getInstance()
+                    GroupManagerPlugin.getInstance()
                         .log(
                             Level.WARNING,
                             "Failed to create rank sign at " + e.getBlock().getLocation(),

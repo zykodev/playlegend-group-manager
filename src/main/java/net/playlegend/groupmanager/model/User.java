@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,4 +38,17 @@ public class User {
   @Getter
   @Setter
   private long groupValidUntil = -1;
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof User) {
+      return this.uuid.equals(((User) obj).getUuid());
+    }
+    return super.equals(obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(uuid);
+  }
 }

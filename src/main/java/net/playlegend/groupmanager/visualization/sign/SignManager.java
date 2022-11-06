@@ -1,7 +1,7 @@
 package net.playlegend.groupmanager.visualization.sign;
 
 import com.google.common.collect.Lists;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.DataAccessException;
 import net.playlegend.groupmanager.datastore.wrapper.RankSignDao;
@@ -11,6 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,13 +47,13 @@ public class SignManager {
     if (!this.signsLoaded) {
       Bukkit.getScheduler()
           .runTaskAsynchronously(
-              GroupManager.getInstance(),
+              GroupManagerPlugin.getInstance(),
               () -> {
                 try {
                   this.reloadSigns();
                   signsLoaded = true;
                 } catch (DataAccessException e) {
-                  GroupManager.getInstance()
+                  GroupManagerPlugin.getInstance()
                       .log(Level.WARNING, "Failed to reload signs from database.", e);
                 }
               });
@@ -63,45 +64,56 @@ public class SignManager {
       if (world != null) {
         Location location =
             new Location(world, rankSign.getPosX(), rankSign.getPosY(), rankSign.getPosZ());
-
+        double closestDistance = this.getClosestPlayerDistance(location);
+        if (closestDistance > 25) continue;
         Bukkit.getScheduler()
             .runTask(
-                GroupManager.getInstance(),
-                () -> {
-                  if (location.getBlock().getState() instanceof Sign) {
-                    Sign sign = (Sign) location.getBlock().getState();
-                    sign.setLine(0, ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "--------");
-                    sign.setLine(1, ChatColor.WHITE + rankSign.getUser().getName());
-                    sign.setLine(
-                        2,
-                        ChatColor.WHITE
-                            + ""
-                            + ChatColor.BOLD
-                            + rankSign.getUser().getGroup().getName());
-                    sign.setLine(3, ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "--------");
-                    sign.update(true);
-                  } else {
-                    Bukkit.getScheduler()
-                        .runTaskAsynchronously(
-                            GroupManager.getInstance(),
-                            () -> {
-                              try {
-                                this.removeSign(rankSign);
-                              } catch (Exception e) {
-                                GroupManager.getInstance()
-                                    .log(
-                                        Level.WARNING,
-                                        "Failed to delete rank sign at " + location,
-                                        e);
-                              }
-                            });
-                  }
-                });
+                GroupManagerPlugin.getInstance(),
+                () -> updateRankSignAtLocation(rankSign, location));
 
       } else {
         this.removeSign(rankSign);
       }
     }
+  }
+
+  /**
+   * Updates a rank sign at a given location.
+   *
+   * @param rankSign the rank sign to update
+   * @param location the location of the rank sign
+   */
+  private void updateRankSignAtLocation(RankSign rankSign, Location location) {
+    if (location.getBlock().getState() instanceof Sign) {
+      Sign sign = (Sign) location.getBlock().getState();
+      sign.setLine(0, ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "--------");
+      sign.setLine(1, ChatColor.WHITE + rankSign.getUser().getName());
+      sign.setLine(
+          2, ChatColor.WHITE + "" + ChatColor.BOLD + rankSign.getUser().getGroup().getName());
+      sign.setLine(3, ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "--------");
+      sign.update(true);
+    } else {
+      this.removeSignAsync(rankSign);
+    }
+  }
+
+  /**
+   * Deletes rank sign asynchronously.
+   *
+   * @param rankSign the rank sign to delete
+   */
+  private void removeSignAsync(RankSign rankSign) {
+    Bukkit.getScheduler()
+        .runTaskAsynchronously(
+            GroupManagerPlugin.getInstance(),
+            () -> {
+              try {
+                this.removeSign(rankSign);
+              } catch (Exception e) {
+                GroupManagerPlugin.getInstance()
+                    .log(Level.WARNING, "Failed to delete rank sign", e);
+              }
+            });
   }
 
   /**
@@ -115,6 +127,15 @@ public class SignManager {
     rankSign.getUser().getRankSigns().remove(rankSign);
     Dao.forType(RankSign.class).delete(rankSign);
     this.rankSigns.remove(rankSign);
-    GroupManager.getInstance().rebuildEverything();
+    GroupManagerPlugin.getInstance().rebuildEverything();
+  }
+
+  private double getClosestPlayerDistance(Location location) {
+    double distance = Double.MAX_VALUE;
+    for (Player player : Bukkit.getOnlinePlayers()) {
+      double playerDistance = player.getLocation().distance(location);
+      if (playerDistance < distance) distance = playerDistance;
+    }
+    return distance;
   }
 }

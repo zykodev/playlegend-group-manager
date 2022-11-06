@@ -1,7 +1,7 @@
 package net.playlegend.groupmanager.visualization.scoreboard;
 
 import lombok.Getter;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.DataAccessException;
 import net.playlegend.groupmanager.datastore.wrapper.GroupDao;
 import net.playlegend.groupmanager.datastore.wrapper.UserDao;
@@ -28,20 +28,22 @@ public class ScoreboardManager {
   public void rebuildPluginScoreboard() {
     Bukkit.getScheduler()
         .runTask(
-            GroupManager.getInstance(),
+            GroupManagerPlugin.getInstance(),
             () -> {
-              this.pluginScoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getNewScoreboard();
+              this.pluginScoreboard =
+                  Objects.requireNonNull(Bukkit.getScoreboardManager()).getNewScoreboard();
 
               Bukkit.getScheduler()
                   .runTaskAsynchronously(
-                      GroupManager.getInstance(),
+                      GroupManagerPlugin.getInstance(),
                       () -> {
                         try {
                           List<Group> allGroups = GroupDao.getAllGroups();
+                          List<User> userDataList = UserDao.getOnlineUsers();
                           if (allGroups != null) {
                             Bukkit.getScheduler()
                                 .runTask(
-                                    GroupManager.getInstance(),
+                                    GroupManagerPlugin.getInstance(),
                                     () -> {
                                       for (Group group : allGroups) {
                                         Team team =
@@ -60,16 +62,37 @@ public class ScoreboardManager {
                                             Team.OptionStatus.ALWAYS);
                                         team.setColor(this.getLastColor(group.getPrefix()));
                                       }
-                                      for (Player player : Bukkit.getOnlinePlayers()) {
-                                        this.addPlayerToScoreboard(this.pluginScoreboard, player);
+
+                                      if (userDataList != null) {
+                                        if (userDataList.size()
+                                            == Bukkit.getOnlinePlayers().size()) {
+                                          for (User user : userDataList) {
+                                            Player player =
+                                                Bukkit.getOnlinePlayers().stream()
+                                                    .filter(
+                                                        p -> p.getUniqueId().equals(user.getUuid()))
+                                                    .findAny()
+                                                    .get();
+                                            this.addPlayerToScoreboard(
+                                                this.pluginScoreboard, player, user);
+                                          }
+                                        } else {
+                                          if (Bukkit.getOnlinePlayers().size() > 0)
+                                            throw new IllegalStateException(
+                                                "No user data for at least one online player");
+                                        }
+                                      } else {
+                                        throw new IllegalStateException(
+                                            "No user data present, but players online");
                                       }
+
                                       this.updateScoreboardForAllPlayers();
                                     });
                           } else {
                             throw new IllegalStateException("No group data present");
                           }
                         } catch (DataAccessException | IllegalStateException e) {
-                          GroupManager.getInstance()
+                          GroupManagerPlugin.getInstance()
                               .log(Level.WARNING, "Failed to rebuild plugin scoreboard.", e);
                         }
                       });
@@ -89,40 +112,26 @@ public class ScoreboardManager {
    *
    * @param scoreboard the scoreboard to which to add the player
    * @param player the player to add
+   * @param userData the players user data
    */
-  public void addPlayerToScoreboard(Scoreboard scoreboard, Player player) {
-    Bukkit.getScheduler()
-        .runTaskAsynchronously(
-            GroupManager.getInstance(),
-            () -> {
-              try {
-                User userData = UserDao.getUser(player.getUniqueId());
-                if (userData != null) {
-                  Group group = userData.getGroup();
-                  Bukkit.getScheduler()
-                      .runTask(
-                          GroupManager.getInstance(),
-                          () -> {
-                            Team team =
-                                scoreboard.getTeam(
-                                    this.patchPriority(group.getPriority()) + group.getName());
-                            if (team == null) {
-                              this.rebuildPluginScoreboard();
-                              this.addPlayerToScoreboard(this.pluginScoreboard, player);
-                              return;
-                            }
-                            team.addEntry(player.getName());
-                            player.setDisplayName(team.getPrefix() + player.getName());
-                          });
-
-                } else {
-                  throw new IllegalStateException("User not in database, but is online");
+  public void addPlayerToScoreboard(Scoreboard scoreboard, Player player, User userData) {
+    if (userData != null) {
+      Group group = userData.getGroup();
+      Bukkit.getScheduler()
+          .runTask(
+              GroupManagerPlugin.getInstance(),
+              () -> {
+                Team team =
+                    scoreboard.getTeam(this.patchPriority(group.getPriority()) + group.getName());
+                if (team == null) {
+                  this.rebuildPluginScoreboard();
+                  this.addPlayerToScoreboard(this.pluginScoreboard, player, userData);
+                  return;
                 }
-              } catch (DataAccessException | IllegalStateException e) {
-                GroupManager.getInstance()
-                    .log(Level.WARNING, "Failed to rebuild scoreboard plugin.", e);
-              }
-            });
+                team.addEntry(player.getName());
+                player.setDisplayName(team.getPrefix() + player.getName());
+              });
+    }
   }
 
   /**

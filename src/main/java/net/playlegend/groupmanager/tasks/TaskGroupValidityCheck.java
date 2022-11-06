@@ -1,6 +1,6 @@
 package net.playlegend.groupmanager.tasks;
 
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.wrapper.UserDao;
 import net.playlegend.groupmanager.model.User;
@@ -17,7 +17,7 @@ public class TaskGroupValidityCheck implements Runnable {
       List<User> onlineUsers = UserDao.getOnlineUsers();
       if (onlineUsers != null) {
         if (onlineUsers.size() != Bukkit.getOnlinePlayers().size()) {
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .log(
                   Level.WARNING,
                   "Missing data for at least one online player",
@@ -28,7 +28,7 @@ public class TaskGroupValidityCheck implements Runnable {
             if (user.getGroupValidUntil() < System.currentTimeMillis()
                 && user.getGroupValidUntil() > 0) {
               user.getGroup().getUsers().remove(user);
-              user.setGroup(GroupManager.getInstance().getDefaultGroup());
+              user.setGroup(GroupManagerPlugin.getInstance().getDefaultGroup());
               user.setGroupValidUntil(-1);
               Dao.forType(User.class).update(user);
             }
@@ -38,7 +38,7 @@ public class TaskGroupValidityCheck implements Runnable {
         }
       }
     } catch (Exception e) {
-      GroupManager.getInstance().log(Level.WARNING, "Failed to refresh group validity.", e);
+      GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to refresh group validity.", e);
     }
   }
 }

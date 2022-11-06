@@ -1,7 +1,7 @@
 package net.playlegend.groupmanager.command;
 
 import lombok.Getter;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.wrapper.GroupDao;
 import net.playlegend.groupmanager.datastore.wrapper.UserDao;
@@ -104,7 +104,7 @@ public class GmUserCommand implements CommandExecutor {
       @NotNull CommandSender sender, @NotNull String[] args, SubCommand subCommand) {
     Bukkit.getScheduler()
         .runTaskAsynchronously(
-            GroupManager.getInstance(),
+            GroupManagerPlugin.getInstance(),
             () -> {
               if (subCommand == SubCommand.GROUP) {
                 this.executeGroup(sender, args);
@@ -113,17 +113,17 @@ public class GmUserCommand implements CommandExecutor {
   }
 
   private void displayNoPermissions(CommandSender commandSender) {
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.error.nopermission", null);
   }
 
   private void displayCommandHelp(CommandSender commandSender) {
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.user.help.heading", null);
     for (SubCommand subCommand : GmUserCommand.SubCommand.values()) {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .getTextManager()
           .sendMessage(commandSender, "gm.user.help." + subCommand.name().toLowerCase(), null);
     }
@@ -143,19 +143,21 @@ public class GmUserCommand implements CommandExecutor {
         } else {
           HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%player%", playerName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.user.error.userdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        GroupManager.getInstance().log(Level.WARNING, "Failed to retrieve user data.", e);
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to retrieve user data.", e);
       }
 
     } else {
-      GroupManager.getInstance().getTextManager().sendMessage(sender, "gm.user.help.group", null);
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.user.help.group", null);
     }
   }
 
@@ -168,12 +170,12 @@ public class GmUserCommand implements CommandExecutor {
     if (user.getGroupValidUntil() == -1) {
       replacements.put(
           "%duration%",
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .getMessage(commandSender, "gm.user.group.duration.infinite", null));
     } else {
       String format =
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .getMessage(commandSender, "gm.user.group.duration.format", null);
       DateTimeFormatter formatter = DateTimeFormat.forPattern(format);
@@ -181,13 +183,13 @@ public class GmUserCommand implements CommandExecutor {
       replacements.put("%duration%", formattedTime);
     }
 
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.user.group.info.heading", replacements);
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.user.group.info.group", replacements);
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.user.group.info.duration", replacements);
   }
@@ -202,19 +204,19 @@ public class GmUserCommand implements CommandExecutor {
           user.setGroupValidUntil(-1);
           Dao.forType(User.class).update(user);
           this.displayUserInfo(commandSender, user);
-          GroupManager.getInstance().rebuildEverything();
+          GroupManagerPlugin.getInstance().rebuildEverything();
         } else {
           HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(commandSender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(commandSender, "gm.error.internalerror", null);
-        GroupManager.getInstance().log(Level.WARNING, "Failed to retrieve group data.", e);
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to retrieve group data.", e);
       }
     } else {
       String durationString = CommandUtil.combineStringsInArray(args, 3, args.length - 1);
@@ -223,7 +225,7 @@ public class GmUserCommand implements CommandExecutor {
         duration =
             this.periodFormatter.parsePeriod(durationString).toStandardDuration().getMillis();
       } catch (IllegalArgumentException e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(commandSender, "gm.user.error.wrongtimeformat", null);
         return;
@@ -235,19 +237,19 @@ public class GmUserCommand implements CommandExecutor {
           user.setGroupValidUntil(System.currentTimeMillis() + duration);
           Dao.forType(User.class).update(user);
           this.displayUserInfo(commandSender, user);
-          GroupManager.getInstance().rebuildEverything();
+          GroupManagerPlugin.getInstance().rebuildEverything();
         } else {
           HashMap<String, String> replacements = new HashMap<>();
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(commandSender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(commandSender, "gm.error.internalerror", null);
-        GroupManager.getInstance().log(Level.WARNING, "Failed to retrieve group data.", e);
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to retrieve group data.", e);
       }
     }
   }

@@ -1,10 +1,12 @@
 package net.playlegend.groupmanager;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import net.playlegend.groupmanager.command.GmGroupCommand;
 import net.playlegend.groupmanager.command.GmUserCommand;
 import net.playlegend.groupmanager.command.RankInfoCommand;
+import net.playlegend.groupmanager.config.GroupManagerConfig;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.DataAccessException;
 import net.playlegend.groupmanager.listener.PlayerChatListener;
@@ -12,6 +14,7 @@ import net.playlegend.groupmanager.listener.PlayerConnectionListener;
 import net.playlegend.groupmanager.listener.PlayerSignChangeListener;
 import net.playlegend.groupmanager.model.Group;
 import net.playlegend.groupmanager.model.Group_;
+import net.playlegend.groupmanager.permissible.PermissibleManager;
 import net.playlegend.groupmanager.tasks.TaskGroupValidityCheck;
 import net.playlegend.groupmanager.tasks.TaskRebuild;
 import net.playlegend.groupmanager.tasks.TaskSignUpdate;
@@ -21,8 +24,10 @@ import net.playlegend.groupmanager.visualization.scoreboard.ScoreboardManager;
 import net.playlegend.groupmanager.visualization.sign.SignManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.java.JavaPluginLoader;
 import org.bukkit.scheduler.BukkitTask;
 import org.hibernate.HibernateError;
 import org.hibernate.SessionFactory;
@@ -44,18 +49,18 @@ import java.util.logging.Logger;
  *
  * @author Lenny (zykodev)
  */
-public class GroupManager extends JavaPlugin {
+public class GroupManagerPlugin extends JavaPlugin {
 
   /*
    * Required for Hibernate setup. (See: https://www.spigotmc.org/threads/setup-jpa-hibernate-for-your-minecraft-plugin.397782/)
    */
   static {
-    Thread.currentThread().setContextClassLoader(GroupManager.class.getClassLoader());
+    Thread.currentThread().setContextClassLoader(GroupManagerPlugin.class.getClassLoader());
   }
 
   @Getter private final Logger logger = Logger.getLogger(this.getClass().getName());
 
-  @Getter private static GroupManager instance;
+  @Getter private static GroupManagerPlugin instance;
 
   @Getter private SessionFactory sessionFactory;
 
@@ -73,6 +78,10 @@ public class GroupManager extends JavaPlugin {
 
   @Getter private BukkitTask groupValidCheckTask;
 
+  @Getter private PermissibleManager permissibleManager;
+
+  @Getter private GroupManagerConfig groupManagerConfig;
+
   @Getter
   private final String prefix =
       ChatColor.RED.toString()
@@ -83,9 +92,28 @@ public class GroupManager extends JavaPlugin {
           + ChatColor.RESET
           + ChatColor.GRAY;
 
+  public GroupManagerPlugin() {
+    super();
+  }
+
+  public GroupManagerPlugin(
+      JavaPluginLoader loader, PluginDescriptionFile desc, File dataFolder, File file) {
+    super(loader, desc, dataFolder, file);
+  }
+
   @Override
   public void onEnable() {
     instance = this;
+
+    try {
+      FileUtil.extractDefaultResources();
+      ObjectMapper objectMapper = new ObjectMapper();
+      this.groupManagerConfig =
+          objectMapper.readValue(
+              new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "config.json"), GroupManagerConfig.class);
+    } catch (IOException e) {
+      this.log(Level.WARNING, "Failed to extract default resources and load config.", e);
+    }
 
     try {
       this.setupHibernate();
@@ -96,7 +124,7 @@ public class GroupManager extends JavaPlugin {
     }
 
     this.textManager = new TextManager();
-    this.textManager.loadLocales("de-DE");
+    this.textManager.loadLocales(this.groupManagerConfig.getFallbackLocale());
 
     this.registerCommands();
     this.registerListeners();
@@ -109,6 +137,8 @@ public class GroupManager extends JavaPlugin {
     this.startSignUpdateTask();
     this.startGroupValidityCheckTask();
     this.startRebuildTask();
+
+    this.permissibleManager = new PermissibleManager();
   }
 
   @Override
@@ -195,6 +225,7 @@ public class GroupManager extends JavaPlugin {
     this.scoreboardManager.rebuildPluginScoreboard();
     try {
       this.signManager.reloadSigns();
+      this.permissibleManager.createCaches();
     } catch (DataAccessException e) {
       this.log(Level.WARNING, "Failed to reload signs from database.", e);
     }
@@ -231,7 +262,10 @@ public class GroupManager extends JavaPlugin {
    * every 5 minutes.
    */
   private void startRebuildTask() {
-    this.rebuildTask = Bukkit.getScheduler().runTaskTimer(this, new TaskRebuild(), 0, 6000);
+    this.rebuildTask =
+        Bukkit.getScheduler()
+            .runTaskTimer(
+                this, new TaskRebuild(), 0, this.groupManagerConfig.getCacheRebuildInterval());
   }
 
   /**
@@ -240,7 +274,9 @@ public class GroupManager extends JavaPlugin {
    */
   private void startSignUpdateTask() {
     this.signUpdateTask =
-        Bukkit.getScheduler().runTaskTimerAsynchronously(this, new TaskSignUpdate(), 0, 100);
+        Bukkit.getScheduler()
+            .runTaskTimerAsynchronously(
+                this, new TaskSignUpdate(), 0, this.groupManagerConfig.getSignUpdateInterval());
   }
 
   /**
@@ -251,6 +287,10 @@ public class GroupManager extends JavaPlugin {
   private void startGroupValidityCheckTask() {
     this.groupValidCheckTask =
         Bukkit.getScheduler()
-            .runTaskTimerAsynchronously(this, new TaskGroupValidityCheck(), 0, 100);
+            .runTaskTimerAsynchronously(
+                this,
+                new TaskGroupValidityCheck(),
+                0,
+                this.groupManagerConfig.getGroupValidityCheckInterval());
   }
 }

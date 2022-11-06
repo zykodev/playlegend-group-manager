@@ -1,8 +1,15 @@
 package net.playlegend.groupmanager.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.playlegend.groupmanager.config.GroupManagerConfig;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.Objects;
 import java.util.Properties;
 
 public class FileUtil {
@@ -37,6 +44,34 @@ public class FileUtil {
       Properties properties = new Properties();
       properties.load(fileInputStream);
       return properties;
+    }
+  }
+
+  /**
+   * Extracts the default resources to their corresponding places.
+   *
+   * @throws IOException if the resources could not be extracted
+   */
+  public static void extractDefaultResources() throws IOException {
+    File hibernateConfig = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "hibernate.properties");
+    if (!hibernateConfig.exists()) {
+      Files.copy(
+          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/locales/de-DE.json")),
+          hibernateConfig.toPath());
+    }
+    File deLocale = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "locales/de-DE.json");
+    if (!deLocale.getParentFile().exists()) deLocale.getParentFile().mkdir();
+    if (!deLocale.exists()) {
+      Files.copy(
+          Objects.requireNonNull(FileUtil.class.getResourceAsStream("assets/locales/de-DE.json")),
+          deLocale.toPath());
+    }
+    File configFile = new File(FileUtil.PLUGIN_ROOT_DIRECTORY, "config.json");
+    if (!configFile.exists()) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      String fileContent = objectMapper.writeValueAsString(new GroupManagerConfig());
+      Files.writeString(
+          configFile.toPath(), fileContent, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
     }
   }
 }

@@ -3,7 +3,6 @@
   "locale.texts": {
     "gm.error.nopermission": "§cDu hast keine Berechtigungen für diesen Befehl.",
     "gm.error.internalerror": "§cEs ist ein interner Fehler aufgetreten. Bitte kontaktiere umgehend einen Administrator.",
-
     "gm.group.error.groupexists": "§cDie Gruppe \"§e%group%§c\" existiert bereits.",
     "gm.group.error.groupdoesnotexist": "§cDie Gruppe \"§e%group%§c\" existiert nicht.",
     "gm.group.error.nametoolong": "§cDer Name einer Gruppe darf maximal 14 Zeichen lang sein.",
@@ -14,7 +13,6 @@
     "gm.group.error.permissionnotset": "§cDie Gruppe \"§e%group%§c\" hat die Berechtigung \"§e%permission%§c\" nicht.",
     "gm.user.error.userdoesnotexist": "§cDer Spieler \"§e%player%§c\" ist nicht bekannt.",
     "gm.user.error.wrongtimeformat": "§cUngültiges Zeitformat (Nutze 'd', 'h', 'm' und 's'). Beispiele: 2h 3m 1s, 30d, 28d12h",
-
     "gm.group.help.heading": "Verwendung von /gmgroup:",
     "gm.group.help.create": "§e/gmgroup create <Name> <Prefix...> §8- §7Erstellt eine neue Gruppe mit Name und Prefix. Der Name darf maximal 14 Zeichen lang sein.",
     "gm.group.help.info": "§e/gmgroup info <Name> §8- §7Zeigt die Daten einer Gruppe an.",
@@ -23,41 +21,33 @@
     "gm.group.help.prefix": "§e/gmgroup prefix <Name> [Prefix...] §8- §7Zeigt oder ändert den Prefix einer Gruppe. Der Prefix darf inkl. Farbcodes maximal 15 Zeichen lang sein.",
     "gm.group.help.priority": "§e/gmgroup priority <Name> [Priorität] §8- §7Zeigt oder ändert die Priorität einer Gruppe. Niedrigere Prioritäten erscheinen in der Tab-List weiter oben. Wert darf zwischen 0 und 99 (inkl.) liegen.",
     "gm.group.help.delete": "§e/gmgroup delete <Name> §8- §7Löscht eine Gruppe.",
-
+    "gm.group.help.list": "§e/gmgroup list §8- §7Listet alle verfügbaren Gruppen auf.",
     "gm.group.create.success": "Die Gruppe \"§e%group%§7\" mit dem Prefix \"§e%prefix%§r§7\" wurde §aerfolgreich erstellt.",
     "gm.group.delete.success": "Die Gruppe \"§e%group%§7\" wurde §aerfolgreich §cgelöscht.",
-
     "gm.group.prefix.show": "Der Prefix der Gruppe \"§e%group%§7\" ist \"%prefix%§r§7\".",
     "gm.group.prefix.edit": "Der Prefix der Gruppe \"§e%group%§7\" ist jetzt \"%prefix%§r§7\".",
-
     "gm.group.priority.show": "Die Priorität der Gruppe \"§e%group%§7\" ist %priority%§r§7.",
     "gm.group.priority.edit": "Die Priorität der Gruppe \"§e%group%§7\" ist jetzt %priority%§r§7.",
-
     "gm.group.info.heading": "Informationen zu Gruppe \"§e%group%§7\":",
     "gm.group.info.prefix": "Prefix: \"§e%prefix%§r§7\"",
     "gm.group.info.priority": "Priorität: §e%priority%",
-
+    "gm.group.list.heading": "Dies sind die verfügbaren Gruppen:",
+    "gm.group.list.entry": "- §e%group%",
     "gm.group.permadd.success": "Der Gruppe \"§e%group%§7\" wurde die Berechtigung \"§e%permission%§7\" §aerfolgreich zugewiesen.",
     "gm.group.permdel.success": "Der Gruppe \"§e%group%§7\" wurde die Berechtigung \"§e%permission%§7\" §aerfolgreich §centzogen.",
-
     "gm.join": "%prefix%%player% §7hat das Spiel §abetreten.",
     "gm.quit": "%prefix%%player% §7hat das Spiel §cverlassen.",
-
     "gm.error.invalidcommandsender": "§cDie Konsole kann diesen Befehl nicht nutzen.",
     "gm.rankinfo.help": "§e/rankinfo §8- §7Zeigt Dir deine aktuelle Gruppe an.",
     "gm.rankinfo.heading": "Dein Rang:",
     "gm.rankinfo.rank": "§e%group% §7(%prefix%%player%§r§7)",
     "gm.rankinfo.duration": "Gültig bis: §e%duration%",
-
     "gm.user.group.info.heading": "Informationen zu %prefix%%player%§r§7:",
     "gm.user.group.info.group": "Gruppe: §e%group%",
     "gm.user.group.info.duration": "Gültig bis: §e%duration%",
-
     "gm.user.group.duration.infinite": "§apermanent",
     "gm.user.group.duration.format": "dd.MM.yyyy 'um' HH:mm:ss",
-
     "gm.user.help.heading": "Verwendung von /gmuser:",
     "gm.user.help.group": "§e/gmuser group <Spieler> [Gruppe] [Dauer] §8- §7Zeigt die Gruppe eines Spielers an, bzw. ändert diese (für eine bestimmte Zeit). Nach Ablauf der Zeit befindet sich der Spieler wieder in der Standardgruppe."
-
   }
 }

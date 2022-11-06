@@ -1,5 +1,6 @@
 package net.playlegend.groupmanager.datastore.wrapper;
 
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.DataAccessException;
 import net.playlegend.groupmanager.model.Group;
@@ -37,5 +38,21 @@ public class GroupDao {
         Dao.forType(Group.class).find((rootObject, criteriaBuilder, output) -> {});
     if (matchingGroups.isEmpty()) return null;
     return matchingGroups;
+  }
+
+  /**
+   * Deletes a group without touching associated users. Note: Group deletion is a possibly slow
+   * process for groups with many members because of a time complexity of O(n + m) where n is the
+   * amount of players in the group and m is the amount of permissions the group has.
+   *
+   * @param group the group to delete
+   * @throws DataAccessException if there is a database error
+   */
+  public static void deleteGroup(Group group) throws DataAccessException {
+    group.getUsers().forEach(u -> u.setGroup(GroupManagerPlugin.getInstance().getDefaultGroup()));
+    group.getPermissions().forEach(p -> p.getGroups().remove(group));
+    group.getPermissions().clear();
+    group.getUsers().clear();
+    Dao.forType(Group.class).delete(group);
   }
 }

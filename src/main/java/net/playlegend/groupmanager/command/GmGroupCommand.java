@@ -2,7 +2,7 @@ package net.playlegend.groupmanager.command;
 
 import com.google.common.collect.Maps;
 import lombok.Getter;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.datastore.Dao;
 import net.playlegend.groupmanager.datastore.wrapper.GroupDao;
 import net.playlegend.groupmanager.datastore.wrapper.PermissionDao;
@@ -18,7 +18,9 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
 
 public class GmGroupCommand implements CommandExecutor {
 
@@ -29,7 +31,8 @@ public class GmGroupCommand implements CommandExecutor {
     PERMDEL("gm.group.permdel"),
     PREFIX("gm.group.prefix"),
     PRIORITY("gm.group.priority"),
-    DELETE("gm.group.delete");
+    DELETE("gm.group.delete"),
+    LIST("gm.group.list");
 
     @Getter private final String permission;
 
@@ -91,7 +94,7 @@ public class GmGroupCommand implements CommandExecutor {
       @NotNull CommandSender sender, @NotNull String[] args, SubCommand subCommand) {
     Bukkit.getScheduler()
         .runTaskAsynchronously(
-            GroupManager.getInstance(),
+            GroupManagerPlugin.getInstance(),
             () -> {
               switch (subCommand) {
                 case CREATE:
@@ -115,6 +118,9 @@ public class GmGroupCommand implements CommandExecutor {
                 case DELETE:
                   this.executeDelete(sender, args);
                   break;
+                case LIST:
+                  this.executeList(sender, args);
+                  break;
                 default:
                   break;
               }
@@ -122,19 +128,50 @@ public class GmGroupCommand implements CommandExecutor {
   }
 
   private void displayNoPermissions(CommandSender commandSender) {
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.error.nopermission", null);
   }
 
   private void displayCommandHelp(CommandSender commandSender) {
-    GroupManager.getInstance()
+    GroupManagerPlugin.getInstance()
         .getTextManager()
         .sendMessage(commandSender, "gm.group.help.heading", null);
     for (SubCommand subCommand : GmGroupCommand.SubCommand.values()) {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .getTextManager()
           .sendMessage(commandSender, "gm.group.help." + subCommand.name().toLowerCase(), null);
+    }
+  }
+
+  private void executeList(CommandSender sender, String[] args) {
+    if (args.length == 1) {
+      try {
+        List<Group> groups = GroupDao.getAllGroups();
+        if (groups != null) {
+          GroupManagerPlugin.getInstance()
+              .getTextManager()
+              .sendMessage(sender, "gm.group.list.heading", null);
+          for (Group group : groups) {
+            HashMap<String, String> replacements = Maps.newHashMap();
+            replacements.put("%group%", group.getName());
+            GroupManagerPlugin.getInstance()
+                .getTextManager()
+                .sendMessage(sender, "gm.group.list.entry", replacements);
+          }
+        } else {
+          throw new IllegalStateException("No groups present but player online");
+        }
+      } catch (Exception e) {
+        GroupManagerPlugin.getInstance()
+            .getTextManager()
+            .sendMessage(sender, "gm.error.internalerror", null);
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to list groups", e);
+      }
+    } else {
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.list", null);
     }
   }
 
@@ -142,7 +179,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length >= 3) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -152,7 +189,7 @@ public class GmGroupCommand implements CommandExecutor {
         prefix = prefix.replace('&', '§');
         if (ChatColor.stripColor(prefix).equalsIgnoreCase(" ")) prefix = prefix.trim();
         if (prefix.length() > 16) {
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.prefixtoolong", null);
           return;
@@ -166,24 +203,26 @@ public class GmGroupCommand implements CommandExecutor {
           Dao.forType(Group.class).put(group);
           replacements.put("%group%", group.getName());
           replacements.put("%prefix%", group.getPrefix());
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.create.success", replacements);
 
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupexists", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
-        e.printStackTrace();
+        GroupManagerPlugin.getInstance().log(Level.WARNING, "Failed to create group", e);
       }
     } else {
-      GroupManager.getInstance().getTextManager().sendMessage(sender, "gm.group.help.create", null);
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.create", null);
     }
   }
 
@@ -191,7 +230,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length == 3) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -206,7 +245,7 @@ public class GmGroupCommand implements CommandExecutor {
           replacements.put("%permission%", permission.getPermission());
           for (Permission groupPermission : group.getPermissions()) {
             if (groupPermission.getPermission().equalsIgnoreCase(permission.getPermission())) {
-              GroupManager.getInstance()
+              GroupManagerPlugin.getInstance()
                   .getTextManager()
                   .sendMessage(sender, "gm.group.error.permissionalreadyset", replacements);
               return;
@@ -214,24 +253,24 @@ public class GmGroupCommand implements CommandExecutor {
           }
           group.getPermissions().add(permission);
           Dao.forType(Group.class).update(group);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.permadd.success", replacements);
 
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .getTextManager()
           .sendMessage(sender, "gm.group.help.permadd", null);
     }
@@ -241,7 +280,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length == 3) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -258,30 +297,30 @@ public class GmGroupCommand implements CommandExecutor {
             if (groupPermission.getPermission().equalsIgnoreCase(permission.getPermission())) {
               group.getPermissions().remove(groupPermission);
               Dao.forType(Group.class).update(group);
-              GroupManager.getInstance()
+              GroupManagerPlugin.getInstance()
                   .getTextManager()
                   .sendMessage(sender, "gm.group.permdel.success", replacements);
 
               return;
             }
           }
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.permissionnotset", replacements);
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .getTextManager()
           .sendMessage(sender, "gm.group.help.permdel", null);
     }
@@ -291,7 +330,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length >= 2) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -301,7 +340,7 @@ public class GmGroupCommand implements CommandExecutor {
         prefix = prefix.replace('&', '§');
         if (ChatColor.stripColor(prefix).equalsIgnoreCase(" ")) prefix = prefix.trim();
         if (prefix.length() > 16) {
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.prefixtoolong", null);
           return;
@@ -315,30 +354,32 @@ public class GmGroupCommand implements CommandExecutor {
             group.setPrefix(prefix);
             Dao.forType(Group.class).update(group);
             replacements.put("%prefix%", prefix);
-            GroupManager.getInstance()
+            GroupManagerPlugin.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.prefix.edit", replacements);
 
           } else {
             replacements.put("%prefix%", group.getPrefix());
-            GroupManager.getInstance()
+            GroupManagerPlugin.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.prefix.show", replacements);
           }
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance().getTextManager().sendMessage(sender, "gm.group.help.prefix", null);
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.prefix", null);
     }
   }
 
@@ -346,7 +387,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length >= 2 && args.length < 4) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -362,7 +403,7 @@ public class GmGroupCommand implements CommandExecutor {
               priority = Integer.parseInt(args[2]);
               if (priority < 0 || priority > 99) throw new IllegalArgumentException();
             } catch (Exception e) {
-              GroupManager.getInstance()
+              GroupManagerPlugin.getInstance()
                   .getTextManager()
                   .sendMessage(sender, "gm.group.error.priorityinvalid", null);
               return;
@@ -370,30 +411,30 @@ public class GmGroupCommand implements CommandExecutor {
             group.setPriority(priority);
             Dao.forType(Group.class).update(group);
             replacements.put("%priority%", "" + priority);
-            GroupManager.getInstance()
+            GroupManagerPlugin.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.priority.edit", replacements);
 
           } else {
             replacements.put("%priority%", "" + group.getPriority());
-            GroupManager.getInstance()
+            GroupManagerPlugin.getInstance()
                 .getTextManager()
                 .sendMessage(sender, "gm.group.priority.show", replacements);
           }
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .getTextManager()
           .sendMessage(sender, "gm.group.help.priority", null);
     }
@@ -403,42 +444,44 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length == 2) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
       }
       if (groupName.equals("default")) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.cannotmodifydefault", null);
         return;
       }
       try {
-        Group group = GroupDao.getGroup(groupName);
         HashMap<String, String> replacements = Maps.newHashMap();
         replacements.put("%group%", groupName);
+        Group group = GroupDao.getGroup(groupName);
         if (group != null) {
-          Dao.forType(Group.class).delete(group);
+          GroupDao.deleteGroup(group);
           replacements.put("%group%", group.getName());
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.delete.success", replacements);
 
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance().getTextManager().sendMessage(sender, "gm.group.help.delete", null);
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.delete", null);
     }
   }
 
@@ -446,7 +489,7 @@ public class GmGroupCommand implements CommandExecutor {
     if (args.length == 2) {
       String groupName = args[1];
       if (groupName.length() > 14) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.group.error.nametoolong", null);
         return;
@@ -458,29 +501,31 @@ public class GmGroupCommand implements CommandExecutor {
           replacements.put("%group%", group.getName());
           replacements.put("%prefix%", group.getPrefix());
           replacements.put("%priority%", group.getPriority() + "");
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.info.heading", replacements);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.info.prefix", replacements);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.info.priority", replacements);
         } else {
           replacements.put("%group%", groupName);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .getTextManager()
               .sendMessage(sender, "gm.group.error.groupdoesnotexist", replacements);
         }
       } catch (Exception e) {
-        GroupManager.getInstance()
+        GroupManagerPlugin.getInstance()
             .getTextManager()
             .sendMessage(sender, "gm.error.internalerror", null);
         e.printStackTrace();
       }
     } else {
-      GroupManager.getInstance().getTextManager().sendMessage(sender, "gm.group.help.info", null);
+      GroupManagerPlugin.getInstance()
+          .getTextManager()
+          .sendMessage(sender, "gm.group.help.info", null);
     }
   }
 }

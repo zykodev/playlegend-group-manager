@@ -8,6 +8,7 @@ import net.playlegend.groupmanager.model.User_;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -48,6 +49,7 @@ public class UserDao {
                   Expression<UUID> uuidExp = rootObject.get(User_.UUID);
                   output.add(uuidExp.in(onlineUuids));
                 });
+    if (onlineUuids.isEmpty()) return new ArrayList<>();
     if (playerUserData.isEmpty()) return null;
     return playerUserData;
   }

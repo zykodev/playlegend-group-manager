@@ -43,4 +43,12 @@ public class RankSign {
   @Getter
   @Setter
   private User user;
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof RankSign) {
+      return this.getId().equals(((RankSign) obj).getId());
+    }
+    return super.equals(obj);
+  }
 }

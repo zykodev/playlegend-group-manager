@@ -1,6 +1,6 @@
 name: GroupManager
 version: '${project.version}'
-main: net.playlegend.groupmanager.GroupManager
+main: net.playlegend.groupmanager.GroupManagerPlugin
 api-version: 1.19
 authors: [ zykodev ]
 description: Group and permission management.

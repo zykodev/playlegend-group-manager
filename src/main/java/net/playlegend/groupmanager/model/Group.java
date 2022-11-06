@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,7 +41,7 @@ public class Group {
   @Setter
   private Set<User> users = new HashSet<>();
 
-  @ManyToMany(cascade = CascadeType.ALL)
+  @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   @JoinTable(
       name = "groups_permissions",
       inverseJoinColumns = {@JoinColumn(name = "permissionId")},
@@ -48,4 +49,17 @@ public class Group {
   @Getter
   @Setter
   private Set<Permission> permissions = new HashSet<>();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof Group) {
+      return this.getId().equals(((Group) obj).getId());
+    }
+    return super.equals(obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id);
+  }
 }

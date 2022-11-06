@@ -10,7 +10,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +45,7 @@ public class Dao<T> {
   }
 
   private EntityManager createEntityManager() {
-    return GroupManager.getInstance().getSessionFactory().createEntityManager();
+    return GroupManagerPlugin.getInstance().getSessionFactory().createEntityManager();
   }
 
   private EntityManager getEntityManager() {
@@ -71,7 +71,7 @@ public class Dao<T> {
         transaction.begin();
         entityManager.persist(entity);
         transaction.commit();
-        GroupManager.getInstance().rebuildEverything();
+        GroupManagerPlugin.getInstance().rebuildEverything();
       } catch (Exception e) {
         throw new DataAccessException(e);
       }
@@ -92,7 +92,7 @@ public class Dao<T> {
                 dataAccessCallback.success(Lists.newArrayList(entity));
               } catch (DataAccessException e) {
                 dataAccessCallback.error(Lists.newArrayList(entity), e);
-                GroupManager.getInstance()
+                GroupManagerPlugin.getInstance()
                     .log(Level.WARNING, "Failed to put entity asynchronously.", e);
               }
             })
@@ -115,7 +115,7 @@ public class Dao<T> {
         transaction.begin();
         entityManager.merge(entity);
         transaction.commit();
-        GroupManager.getInstance().rebuildEverything();
+        GroupManagerPlugin.getInstance().rebuildEverything();
         return entity;
       } catch (Exception e) {
         throw new DataAccessException(e);
@@ -137,7 +137,7 @@ public class Dao<T> {
                 dataAccessCallback.success(Lists.newArrayList(newEntity));
               } catch (DataAccessException e) {
                 dataAccessCallback.error(Lists.newArrayList(entity), e);
-                GroupManager.getInstance()
+                GroupManagerPlugin.getInstance()
                     .log(Level.WARNING, "Failed to update entity asynchronously.", e);
               }
             })
@@ -159,7 +159,7 @@ public class Dao<T> {
         entityTransaction.begin();
         entityManager.remove(entityManager.merge(entity));
         entityTransaction.commit();
-        GroupManager.getInstance().rebuildEverything();
+        GroupManagerPlugin.getInstance().rebuildEverything();
       } catch (Exception e) {
         throw new DataAccessException(e);
       }
@@ -180,7 +180,7 @@ public class Dao<T> {
                 dataAccessCallback.success(Lists.newArrayList(entity));
               } catch (DataAccessException e) {
                 dataAccessCallback.error(Lists.newArrayList(entity), e);
-                GroupManager.getInstance()
+                GroupManagerPlugin.getInstance()
                     .log(Level.WARNING, "Failed to delete entity asynchronously.", e);
               }
             })
@@ -224,11 +224,6 @@ public class Dao<T> {
         List<T> resultList = result.getResultList();
         entityTransaction.commit();
         return resultList; // execute the query and return the result list.
-
-        //
-        // TODO: Freshen this up -> Make it more readable, possibly move stuff into different
-        // sub-methods.
-        //
       } catch (Exception e) {
         throw new DataAccessException(e);
       }
@@ -250,7 +245,7 @@ public class Dao<T> {
                 dataAccessCallback.success(foundEntities);
               } catch (DataAccessException e) {
                 dataAccessCallback.error(Lists.newArrayList(), e);
-                GroupManager.getInstance()
+                GroupManagerPlugin.getInstance()
                     .log(Level.WARNING, "Failed to find entity asynchronously.", e);
               }
             })

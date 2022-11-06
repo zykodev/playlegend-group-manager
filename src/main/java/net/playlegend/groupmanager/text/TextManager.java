@@ -2,7 +2,7 @@ package net.playlegend.groupmanager.text;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
-import net.playlegend.groupmanager.GroupManager;
+import net.playlegend.groupmanager.GroupManagerPlugin;
 import net.playlegend.groupmanager.util.FileUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -26,7 +26,7 @@ public class TextManager {
    * @param fallbackLocaleName the locale to use when a users' locale is not present
    */
   public void loadLocales(String fallbackLocaleName) {
-    GroupManager.getInstance().log(Level.INFO, "Loading locales...");
+    GroupManagerPlugin.getInstance().log(Level.INFO, "Loading locales...");
     ObjectMapper objectMapper = new ObjectMapper();
     try {
       for (File file :
@@ -35,13 +35,13 @@ public class TextManager {
           LocaleConfiguration localeConfiguration =
               objectMapper.readValue(file, LocaleConfiguration.class);
           this.localesMap.put(localeConfiguration.getLocaleName(), localeConfiguration);
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .log(Level.INFO, "Locale \"" + localeConfiguration.getLocaleName() + "\" loaded.");
           if (localeConfiguration.getLocaleName().equalsIgnoreCase(fallbackLocaleName)) {
             this.fallbackLocaleConfiguration = localeConfiguration;
           }
         } catch (Exception e) {
-          GroupManager.getInstance()
+          GroupManagerPlugin.getInstance()
               .log(
                   Level.WARNING,
                   "Failed to load locales data from file \""
@@ -51,18 +51,18 @@ public class TextManager {
         }
       }
     } catch (NullPointerException e) {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .log(Level.WARNING, "Failed to load locales data. Falling back to placeholders.", e);
     }
     if (this.fallbackLocaleConfiguration == null) {
-      GroupManager.getInstance()
+      GroupManagerPlugin.getInstance()
           .log(
               Level.WARNING,
               "Default locales file \""
                   + fallbackLocaleName
                   + ".json\" not found in locales directory. Falling back to placeholders.");
     }
-    GroupManager.getInstance().log(Level.INFO, "Finished loading locales.");
+    GroupManagerPlugin.getInstance().log(Level.INFO, "Finished loading locales.");
   }
 
   /**
@@ -161,9 +161,9 @@ public class TextManager {
     String locale = this.getLocale(sender);
     String message = this.getMessage(locale, messageKey, replacements);
     if (sender instanceof Player) {
-      sender.sendMessage(GroupManager.getInstance().getPrefix() + message);
+      sender.sendMessage(GroupManagerPlugin.getInstance().getPrefix() + message);
     } else {
-      GroupManager.getInstance().log(Level.INFO, ChatColor.stripColor(message));
+      GroupManagerPlugin.getInstance().log(Level.INFO, ChatColor.stripColor(message));
     }
   }
 }
